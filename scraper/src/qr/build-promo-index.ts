@@ -67,6 +67,36 @@ function normalizeName(name: string): string {
     .replace(/^(el|la|los|las|lo)/, '');
 }
 
+// Generic merchant names — these promos apply to "any merchant" for the issuer,
+// not to a specific business. They go in the `general` bucket.
+const GENERIC_MERCHANT_PATTERNS = [
+  /\badherid/i, /\bcomercio/i, /\blocale?s?\b/i, /\bconsulta\b/i,
+  /\btodos los\b/i, /\bvarios\b/i, /^supermercados?$/i, /^alimentos$/i,
+  /\btienda online adherid/i, /\bacepten modo\b/i, /^sin datos$/i,
+];
+
+function isGenericMerchant(name: string): boolean {
+  return GENERIC_MERCHANT_PATTERNS.some(p => p.test(name));
+}
+
+// MCC → promo category mapping — category values MUST match the `category` field
+// used in the promo NDJSON data (checked: Farmacia, Automotor, Deporte, etc.)
+const MCC_TO_CATEGORY: Record<string, string> = {
+  '5912': 'Farmacia',       '5122': 'Farmacia',
+  '5411': 'Supermercados',  '5422': 'Supermercados',
+  '5541': 'Combustible',    '5542': 'Combustible',
+  '5812': 'Gastronomía',    '5814': 'Gastronomía',  '5813': 'Gastronomía',
+  '5651': 'Indumentaria',   '5699': 'Indumentaria',
+  '5661': 'Indumentaria',   // Shoe stores → Indumentaria (closest match)
+  '5734': 'Tecnología',     '5045': 'Tecnología',
+  '5941': 'Deporte',        '5945': 'Deporte',
+  '5533': 'Automotor',      '5511': 'Automotor',    '5521': 'Automotor',
+  '7011': 'Viajes',         '4511': 'Viajes',       '7512': 'Viajes',
+  '8049': 'Salud',          '8011': 'Salud',        '8099': 'Salud',
+  '5999': 'Otro',
+};
+export { MCC_TO_CATEGORY };
+
 function findLatestNdjson(dir: string): string | null {
   try {
     const files = readdirSync(dir)
@@ -161,9 +191,14 @@ function main() {
   const promosByCuit = new Map<string, PromoSummary[]>();
   // Index: normalized_name → PromoSummary[]
   const promosByName = new Map<string, PromoSummary[]>();
+  // Index: category → PromoSummary[] (for MCC fallback)
+  const promosByCategory = new Map<string, PromoSummary[]>();
+  // General promos (apply to any merchant, not specific ones)
+  const generalPromos: PromoSummary[] = [];
 
   let indexed = 0;
   let noMerchant = 0;
+  let generalCount = 0;
 
   for (const row of rows) {
     const summary = toSummary(row);
@@ -178,6 +213,14 @@ function main() {
       ?? merchantMap.name_index[norm2]
       ?? null;
 
+    // Generic merchants → go into general bucket (not merchant-specific)
+    if (isGenericMerchant(name)) {
+      generalPromos.push(summary);
+      generalCount++;
+      indexed++;
+      continue;
+    }
+
     // Index by CUIT
     if (cuit) {
       if (!promosByCuit.has(cuit)) promosByCuit.set(cuit, []);
@@ -188,6 +231,13 @@ function main() {
     const norm = norm2;
     if (!promosByName.has(norm)) promosByName.set(norm, []);
     promosByName.get(norm)!.push(summary);
+
+    // Index by category (for MCC fallback)
+    const cat = summary.category;
+    if (cat && cat !== 'Otro') {
+      if (!promosByCategory.has(cat)) promosByCategory.set(cat, []);
+      promosByCategory.get(cat)!.push(summary);
+    }
 
     indexed++;
   }
@@ -227,6 +277,11 @@ function main() {
   for (const [name, promos] of promosByName) {
     idxByName[name] = promos.map(p => getOrAddPromo(p));
   }
+  const idxByCategory: Record<string, number[]> = {};
+  for (const [cat, promos] of promosByCategory) {
+    idxByCategory[cat] = promos.map(p => getOrAddPromo(p));
+  }
+  const generalIndices = generalPromos.map(p => getOrAddPromo(p));
 
   const output = {
     generated_at: new Date().toISOString(),
@@ -236,8 +291,10 @@ function main() {
       active_rows: rows.length,
       indexed,
       no_merchant: noMerchant,
+      general_promos: generalCount,
       cuits_with_promos: promosByCuit.size,
       names_with_promos: promosByName.size,
+      categories_with_promos: promosByCategory.size,
       total_unique_promos: allPromos.length,
     },
     // Flat promo array — look up by index
@@ -246,7 +303,13 @@ function main() {
     by_cuit: idxByCuit,
     // Normalized merchant name → [promo indices]
     by_name: idxByName,
+    // Category → [promo indices] (MCC fallback)
+    by_category: idxByCategory,
+    // General promos — apply at any merchant, filtered by issuer/day at query time
+    general: generalIndices,
     cuit_to_name: cuitToName,
+    // MCC → category mapping (shipped with index so client can resolve MCC)
+    mcc_to_category: MCC_TO_CATEGORY,
   };
 
   writeFileSync(outPath, JSON.stringify(output), 'utf8');
@@ -257,6 +320,8 @@ function main() {
   console.log(`  Unique promos stored: ${allPromos.length}`);
   console.log(`  CUITs with promos:    ${promosByCuit.size}`);
   console.log(`  Names with promos:    ${promosByName.size}`);
+  console.log(`  Categories indexed:   ${promosByCategory.size}`);
+  console.log(`  General promos:       ${generalCount}`);
   console.log(`  Written to:           ${outPath}`);
   const sizeKb = Math.round(Buffer.byteLength(JSON.stringify(output)) / 1024);
   console.log(`  File size:            ${sizeKb} KB`);

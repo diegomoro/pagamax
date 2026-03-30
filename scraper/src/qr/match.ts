@@ -55,7 +55,7 @@ export interface IssuerGroup {
 
 export interface MatchResult {
   /** How the merchant was identified */
-  match_method: 'cuit' | 'name_exact' | 'name_fuzzy' | 'none';
+  match_method: 'cuit' | 'name_exact' | 'name_fuzzy' | 'name_prefix' | 'mcc' | 'none';
   /** Resolved CUIT (if found) */
   cuit: string | null;
   /** Best known name for the merchant */
@@ -70,13 +70,31 @@ export interface MatchResult {
   };
   /** All matching promos, best-first */
   promos: PromoMatch[];
+  /** General promos valid at any merchant (filtered by issuer/day) */
+  general_promos: PromoMatch[];
   /** Promos grouped by issuer */
   by_issuer: IssuerGroup[];
   /** Total number of promos found before filter */
   total_unfiltered: number;
   /** Applied filters summary */
   filters_applied: string[];
+  /** True if QR CUIT was a known PSP aggregator (merchant-level CUIT was unavailable) */
+  aggregator_qr: boolean;
 }
+
+// ─── Known aggregator / PSP CUITs ─────────────────────────────────────────────
+// These may appear in QR Tag 50 when merchants use the PSP as payment processor.
+// If Tag 50 contains one of these, it's the PSP's CUIT, not the merchant's —
+// skip CUIT lookup and rely on Tag 59 name matching instead.
+const AGGREGATOR_CUITS = new Set([
+  '30578176470', // Mercado Pago S.A.
+  '30715990604', // MODO (Interbanking)
+  '30522624896', // Prisma Medios de Pago (Visa / PayWay)
+  '30709144940', // Getnet Argentina
+  '30500006928', // First Data / Fiserv Argentina
+  '30708246022', // TodoPago (American Express)
+  '30531098359', // POSNET / Telecheck
+]);
 
 // ─── Index loader ───────────────────────────────────────────────────────────────
 
@@ -84,7 +102,10 @@ interface PromoIndex {
   promos: PromoSummary[];
   by_cuit: Record<string, number[]>;
   by_name: Record<string, number[]>;
+  by_category: Record<string, number[]>;
+  general: number[];
   cuit_to_name: Record<string, string>;
+  mcc_to_category: Record<string, string>;
 }
 
 let _index: PromoIndex | null = null;
@@ -199,12 +220,19 @@ export function matchQr(qrPayload: string, opts: MatchOptions = {}): MatchResult
   let matchMethod: MatchResult['match_method'] = 'none';
   let resolvedCuit: string | null = null;
   let resolvedName = parsed.merchantName ?? '';
+  let aggregatorQr = false;
 
-  // 1. CUIT lookup (most reliable)
-  if (parsed.cuit && index.by_cuit[parsed.cuit]) {
-    promoIndices = index.by_cuit[parsed.cuit]!;
-    resolvedCuit = parsed.cuit;
-    resolvedName = index.cuit_to_name[parsed.cuit] ?? parsed.merchantName ?? parsed.cuit;
+  // Detect aggregator CUIT — Tag 50 may contain the PSP's CUIT instead of merchant's.
+  // In that case, skip CUIT lookup and rely on name matching.
+  const qrCuit = parsed.cuit;
+  const isAggregator = qrCuit != null && AGGREGATOR_CUITS.has(qrCuit);
+  if (isAggregator) aggregatorQr = true;
+
+  // 1. CUIT lookup (most reliable — only when it's the merchant's own CUIT)
+  if (qrCuit && !isAggregator && index.by_cuit[qrCuit]) {
+    promoIndices = index.by_cuit[qrCuit]!;
+    resolvedCuit = qrCuit;
+    resolvedName = index.cuit_to_name[qrCuit] ?? parsed.merchantName ?? qrCuit;
     matchMethod = 'cuit';
   }
 
@@ -217,7 +245,21 @@ export function matchQr(qrPayload: string, opts: MatchOptions = {}): MatchResult
     }
   }
 
-  // 3. Fuzzy name lookup (substring)
+  // 3. Prefix name lookup — Tag 59 is capped at 25 chars and often truncated.
+  //    If the QR name is 25 chars, search for indexed names that start with it.
+  if (promoIndices.length === 0 && parsed.merchantName && parsed.merchantName.length >= 20) {
+    const norm = normalizeName(parsed.merchantName);
+    for (const [indexedName, indices] of Object.entries(index.by_name)) {
+      if (indexedName.startsWith(norm) && norm.length / indexedName.length >= 0.7) {
+        promoIndices = indices;
+        resolvedName = indexedName;
+        matchMethod = 'name_prefix';
+        break;
+      }
+    }
+  }
+
+  // 4. Fuzzy name lookup (substring with coverage ratio)
   if (promoIndices.length === 0 && parsed.merchantName) {
     const norm = normalizeName(parsed.merchantName);
     for (const [indexedName, indices] of Object.entries(index.by_name)) {
@@ -234,6 +276,17 @@ export function matchQr(qrPayload: string, opts: MatchOptions = {}): MatchResult
     }
   }
 
+  // 5. MCC category fallback — when merchant can't be identified by name/CUIT,
+  //    use the MCC to show promos valid for the merchant's category.
+  if (promoIndices.length === 0 && parsed.mcc) {
+    const category = index.mcc_to_category[parsed.mcc];
+    if (category && index.by_category[category]) {
+      promoIndices = index.by_category[category]!;
+      resolvedName = parsed.merchantName ?? `(${category})`;
+      matchMethod = 'mcc';
+    }
+  }
+
   const totalUnfiltered = promoIndices.length;
   let promos: PromoMatch[] = promoIndices.map(i => ({
     ...index.promos[i]!,
@@ -241,50 +294,36 @@ export function matchQr(qrPayload: string, opts: MatchOptions = {}): MatchResult
     relevance_score: 0,
   }));
 
-  // ─── Filters ─────────────────────────────────────────────────────────────────
+  // General promos — always resolved, filtered same as merchant promos
+  let generalPromos: PromoMatch[] = (index.general ?? []).map(i => ({
+    ...index.promos[i]!,
+    match_reason: 'general' as string,
+    relevance_score: 0,
+  }));
 
-  // Filter: QR-eligible channels
-  if (opts.rail !== 'card') { // unless user explicitly said card payment
-    const before = promos.length;
-    promos = promos.filter(p => isQrEligible(p));
-    if (promos.length < before) filtersApplied.push(`qr_eligible(-${before - promos.length})`);
+  // ─── Filters (applied to both merchant promos and general promos) ─────────────
+
+  function applyFilters(list: PromoMatch[], label: string): PromoMatch[] {
+    if (opts.rail !== 'card') list = list.filter(p => isQrEligible(p));
+    list = list.filter(p => isValidDay(p, todayName));
+    if (opts.issuer && !opts.allIssuers) list = list.filter(p => matchesIssuer(p, opts.issuer!));
+    if (opts.cardBrand) list = list.filter(p => matchesBrand(p, opts.cardBrand!));
+    if (opts.cardType) list = list.filter(p => matchesCardType(p, opts.cardType!));
+    return list;
   }
 
-  // Filter: day of week
-  {
-    const before = promos.length;
-    promos = promos.filter(p => isValidDay(p, todayName));
-    const removed = before - promos.length;
-    if (removed > 0) filtersApplied.push(`day:${todayName}(-${removed})`);
-  }
+  const beforeMerchant = promos.length;
+  promos = applyFilters(promos, 'merchant');
+  const removedMerchant = beforeMerchant - promos.length;
+  if (removedMerchant > 0) filtersApplied.push(`filters(-${removedMerchant})`);
 
-  // Filter: issuer (if specified and not allIssuers)
-  if (opts.issuer && !opts.allIssuers) {
-    const before = promos.length;
-    promos = promos.filter(p => matchesIssuer(p, opts.issuer!));
-    const removed = before - promos.length;
-    if (removed > 0) filtersApplied.push(`issuer:${opts.issuer}(-${removed})`);
-  }
-
-  // Filter: card brand
-  if (opts.cardBrand) {
-    const before = promos.length;
-    promos = promos.filter(p => matchesBrand(p, opts.cardBrand!));
-    const removed = before - promos.length;
-    if (removed > 0) filtersApplied.push(`brand:${opts.cardBrand}(-${removed})`);
-  }
-
-  // Filter: card type
-  if (opts.cardType) {
-    const before = promos.length;
-    promos = promos.filter(p => matchesCardType(p, opts.cardType!));
-    const removed = before - promos.length;
-    if (removed > 0) filtersApplied.push(`type:${opts.cardType}(-${removed})`);
-  }
+  generalPromos = applyFilters(generalPromos, 'general');
 
   // Score and sort
   for (const p of promos) p.relevance_score = scorePromo(p);
   promos.sort((a, b) => b.relevance_score - a.relevance_score);
+  for (const p of generalPromos) p.relevance_score = scorePromo(p);
+  generalPromos.sort((a, b) => b.relevance_score - a.relevance_score);
 
   // Group by issuer
   const issuerMap = new Map<string, PromoMatch[]>();
@@ -315,9 +354,11 @@ export function matchQr(qrPayload: string, opts: MatchOptions = {}): MatchResult
       cbu: parsed.cbu,
     },
     promos,
+    general_promos: generalPromos,
     by_issuer: byIssuer,
     total_unfiltered: totalUnfiltered,
     filters_applied: filtersApplied,
+    aggregator_qr: aggregatorQr,
   };
 }
 
@@ -354,11 +395,25 @@ if (process.argv[1]?.includes('match')) {
   console.log(`  CUIT:    ${result.cuit ?? '(unknown)'}`);
   console.log(`  Name:    ${result.merchant_name}`);
 
-  console.log(`\nPromos: ${result.promos.length} found (from ${result.total_unfiltered} total)`);
+  if (result.aggregator_qr) console.log(`  ⚠️  Aggregator QR — CUIT ${result.qr.cuit} is a PSP, used name matching`);
+  console.log(`\nPromos: ${result.promos.length} merchant-specific + ${result.general_promos.length} general (from ${result.total_unfiltered} total)`);
   if (result.filters_applied.length) console.log(`  Filters: ${result.filters_applied.join(', ')}`);
 
+  // Show best general promos summary
+  if (result.general_promos.length > 0) {
+    const bestGeneral = result.general_promos.slice(0, 3);
+    console.log(`\nGeneral promos (top ${Math.min(3, result.general_promos.length)} of ${result.general_promos.length} valid at any merchant today):`);
+    for (const p of bestGeneral) {
+      const disc = p.discount_type === 'installments'
+        ? `${p.installments_count}x cuotas`
+        : `${p.discount_percent ?? '?'}% ${p.discount_type === 'cashback' ? 'cashback' : 'off'}`;
+      const day = p.day_pattern && p.day_pattern !== 'everyday' ? ` [${p.day_pattern}]` : '';
+      console.log(`    ${p.issuer.toUpperCase()}: ${disc}${day} — ${p.promo_title}`);
+    }
+  }
+
   if (result.by_issuer.length === 0) {
-    console.log('\n  No matching promos found for this merchant / day / payment method.');
+    console.log('\n  No merchant-specific promos for this merchant / day / payment method.');
   } else {
     for (const group of result.by_issuer) {
       console.log(`\n  ── ${group.issuer.toUpperCase()} (${group.promos.length} promos, best: ${group.best_discount_percent ?? '?'}% off) ──`);
