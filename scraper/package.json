@@ -8,6 +8,7 @@
     "dev": "tsx watch src/main.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "recommend:demo": "tsx src/recommendation/cli.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc"
   },

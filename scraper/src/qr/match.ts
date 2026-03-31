@@ -207,6 +207,33 @@ function scorePromo(promo: PromoSummary): number {
   return score;
 }
 
+function inferResolvedCategory(
+  mcc: string | null,
+  merchantPromos: PromoMatch[],
+  index: PromoIndex,
+): string | null {
+  if (mcc && index.mcc_to_category[mcc]) {
+    return index.mcc_to_category[mcc]!;
+  }
+
+  const counts = new Map<string, number>();
+  for (const promo of merchantPromos) {
+    if (!promo.category || promo.category === 'Otro') continue;
+    counts.set(promo.category, (counts.get(promo.category) ?? 0) + 1);
+  }
+
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [category, count] of counts) {
+    if (count > bestCount) {
+      best = category;
+      bestCount = count;
+    }
+  }
+
+  return best;
+}
+
 // ─── Core match function ───────────────────────────────────────────────────────
 
 export function matchQr(qrPayload: string, opts: MatchOptions = {}): MatchResult {
@@ -301,6 +328,14 @@ export function matchQr(qrPayload: string, opts: MatchOptions = {}): MatchResult
     relevance_score: 0,
   }));
 
+  const resolvedCategory = inferResolvedCategory(parsed.mcc, promos, index);
+  if (resolvedCategory) {
+    const before = generalPromos.length;
+    generalPromos = generalPromos.filter(p => p.category === resolvedCategory);
+    const removed = before - generalPromos.length;
+    if (removed > 0) filtersApplied.push(`general_category(${resolvedCategory}, -${removed})`);
+  }
+
   // ─── Filters (applied to both merchant promos and general promos) ─────────────
 
   function applyFilters(list: PromoMatch[], label: string): PromoMatch[] {
@@ -375,12 +410,16 @@ if (process.argv[1]?.includes('match')) {
   const cliGet = (f: string) => { const i = cliArgs.indexOf(f); return i !== -1 ? cliArgs[i+1] : undefined; };
 
   const opts: MatchOptions = {
-    today:     cliGet('--today'),
-    issuer:    cliGet('--issuer'),
-    cardBrand: cliGet('--brand'),
-    cardType:  cliGet('--type'),
     allIssuers: cliArgs.includes('--all-issuers'),
   };
+  const today = cliGet('--today');
+  const issuer = cliGet('--issuer');
+  const cardBrand = cliGet('--brand');
+  const cardType = cliGet('--type');
+  if (today) opts.today = today;
+  if (issuer) opts.issuer = issuer;
+  if (cardBrand) opts.cardBrand = cardBrand;
+  if (cardType) opts.cardType = cardType;
 
   const result = matchQr(payload, opts);
 

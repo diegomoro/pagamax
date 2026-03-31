@@ -1,0 +1,46 @@
+[
+  {
+    "id": "modo-santander-visa-credit-qr",
+    "provider": "modo",
+    "label": "MODO + Santander Visa credit",
+    "rail": "qr",
+    "walletLabel": "Santander",
+    "cardBrand": "Visa",
+    "cardType": "credit"
+  },
+  {
+    "id": "modo-comafi-master-debit-qr",
+    "provider": "modo",
+    "label": "MODO + Comafi Mastercard debit",
+    "rail": "qr",
+    "walletLabel": "Comafi",
+    "cardBrand": "Mastercard",
+    "cardType": "debit"
+  },
+  {
+    "id": "bbva-visa-credit-qr",
+    "provider": "bbva",
+    "label": "App BBVA + Visa credit",
+    "rail": "qr",
+    "walletLabel": "BBVA",
+    "cardBrand": "Visa",
+    "cardType": "credit"
+  },
+  {
+    "id": "mercadopago-balance-qr",
+    "provider": "mercadopago",
+    "label": "Mercado Pago balance",
+    "rail": "qr",
+    "walletLabel": "Mercado Pago",
+    "cardType": "account_money"
+  },
+  {
+    "id": "personalpay-prepaid-qr",
+    "provider": "personalpay",
+    "label": "Personal Pay prepaid",
+    "rail": "qr",
+    "walletLabel": "Personal Pay",
+    "cardBrand": "Visa",
+    "cardType": "prepaid"
+  }
+]
