@@ -13,6 +13,7 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@pagamax/core": "*",
     "cheerio": "^1.0.0",
     "playwright": "^1.44.0",
     "pino": "^9.0.0",

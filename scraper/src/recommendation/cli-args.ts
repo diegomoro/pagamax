@@ -25,12 +25,15 @@ export function parseRecommendationCliArgs(args: string[]): RecommendationCliArg
     return null;
   }
 
-  return {
+  const parsed: RecommendationCliArgs = {
     qrPayload,
     amountArg,
     methodsPath,
-    today,
-    topArg,
     asJson: args.includes('--json'),
   };
+
+  if (today) parsed.today = today;
+  if (topArg) parsed.topArg = topArg;
+
+  return parsed;
 }

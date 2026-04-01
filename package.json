@@ -1,0 +1,17 @@
+{
+  "name": "pagamax",
+  "private": true,
+  "workspaces": [
+    "app",
+    "packages/*",
+    "scraper"
+  ],
+  "scripts": {
+    "mobile:start": "npm run start --workspace @pagamax/app",
+    "mobile:android": "npm run android --workspace @pagamax/app",
+    "mobile:preview": "npm run build:preview --workspace @pagamax/app",
+    "data:sync": "node ./scripts/sync-mobile-data.mjs",
+    "core:test": "npm run test --workspace @pagamax/core",
+    "core:build": "npm run build --workspace @pagamax/core"
+  }
+}
