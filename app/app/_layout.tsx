@@ -9,21 +9,83 @@ export default function RootLayout() {
       <PagamaxProvider>
         <Stack
           screenOptions={{
-            headerStyle: {
-              backgroundColor: colors.surface,
-            },
-            headerTintColor: colors.ink,
-            headerShadowVisible: false,
+            headerShown: false,
             contentStyle: {
               backgroundColor: colors.background,
             },
           }}
         >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="scan" options={{ title: 'Escanear QR', presentation: 'modal' }} />
-          <Stack.Screen name="manual" options={{ title: 'Ingreso manual', presentation: 'modal' }} />
-          <Stack.Screen name="results" options={{ title: 'Recomendaciones' }} />
-          <Stack.Screen name="detail" options={{ title: 'Detalle del beneficio' }} />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="onboarding"
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'fade',
+            }}
+          />
+          <Stack.Screen
+            name="scan"
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'fade',
+            }}
+          />
+          <Stack.Screen
+            name="manual"
+            options={{
+              animation: 'slide_from_bottom',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="checkout-link"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="results"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="detail"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="success"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="history"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="opportunities"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="profile"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
         </Stack>
       </PagamaxProvider>
     </SafeAreaProvider>

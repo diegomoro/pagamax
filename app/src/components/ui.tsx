@@ -1,6 +1,30 @@
-import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type PressableProps, type ScrollViewProps } from 'react-native';
-import { colors, spacing } from '@/lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useRef, type ComponentProps, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Modal,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  type GestureResponderEvent,
+  type PressableProps,
+  type ScrollViewProps,
+  type StyleProp,
+  type SwitchProps,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, radius, shadows, spacing, timing, typography } from '@/lib/theme';
+
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 export function ScreenScroll(props: ScrollViewProps) {
   return (
@@ -8,6 +32,7 @@ export function ScreenScroll(props: ScrollViewProps) {
       {...props}
       contentContainerStyle={[styles.screen, props.contentContainerStyle]}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     />
   );
 }
@@ -15,8 +40,8 @@ export function ScreenScroll(props: ScrollViewProps) {
 export function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={styles.titleWrap}>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <Text style={styles.pageTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.pageSubtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
@@ -25,55 +50,79 @@ export function SectionTitle({ children }: { children: string }) {
   return <Text style={styles.sectionTitle}>{children}</Text>;
 }
 
-export function Card({ children }: { children: ReactNode }) {
-  return <View style={styles.card}>{children}</View>;
-}
-
-export function Pill({ label, tone = 'default' }: { label: string; tone?: 'default' | 'accent' | 'warning' | 'success' }) {
+export function Card({
+  children,
+  elevated = false,
+  style,
+}: {
+  children: ReactNode;
+  elevated?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
-    <View style={[
-      styles.pill,
-      tone === 'accent' && styles.pillAccent,
-      tone === 'warning' && styles.pillWarning,
-      tone === 'success' && styles.pillSuccess,
-    ]}>
-      <Text style={[
-        styles.pillLabel,
-        tone === 'accent' && styles.pillLabelAccent,
-        tone === 'warning' && styles.pillLabelWarning,
-        tone === 'success' && styles.pillLabelSuccess,
-      ]}>
-        {label}
-      </Text>
+    <View style={[styles.card, elevated && styles.cardElevated, style]}>
+      {children}
     </View>
   );
 }
 
-function BaseButton({ children, kind, ...props }: PressableProps & { children: ReactNode; kind: 'primary' | 'secondary' }) {
+export function Divider() {
+  return <View style={styles.divider} />;
+}
+
+export function Pill({
+  label,
+  tone = 'default',
+}: {
+  label: string;
+  tone?: 'default' | 'accent' | 'warning' | 'success';
+}) {
   return (
-    <Pressable
-      {...props}
-      style={({ pressed }) => [
-        styles.button,
-        kind === 'primary' ? styles.buttonPrimary : styles.buttonSecondary,
-        pressed && (kind === 'primary' ? styles.buttonPrimaryPressed : styles.buttonSecondaryPressed),
-        typeof props.style === 'function' ? props.style({ pressed }) : props.style,
-      ]}
-    >
-      <Text style={kind === 'primary' ? styles.buttonPrimaryLabel : styles.buttonSecondaryLabel}>{children}</Text>
+    <View style={[styles.pill, toneStyles[tone].pill]}>
+      <Text style={[styles.pillLabel, toneStyles[tone].label]}>{label}</Text>
+    </View>
+  );
+}
+
+export function Chip({
+  label,
+  selected = false,
+  onPress,
+}: {
+  label: string;
+  selected?: boolean;
+  onPress?: () => void;
+}) {
+  const handlePress = async () => {
+    await Haptics.selectionAsync();
+    onPress?.();
+  };
+
+  return (
+    <Pressable onPress={handlePress} style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.chipPressed]}>
+      <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>{label}</Text>
     </Pressable>
   );
 }
 
-export function PrimaryButton(props: PressableProps & { children: ReactNode }) {
-  return <BaseButton {...props} kind="primary" />;
+export function StatPill({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.statPill}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
 }
 
-export function SecondaryButton(props: PressableProps & { children: ReactNode }) {
-  return <BaseButton {...props} kind="secondary" />;
-}
-
-export function InlineNotice({ title, body, tone = 'default' }: { title: string; body: string; tone?: 'default' | 'warning' }) {
+export function InlineNotice({
+  title,
+  body,
+  tone = 'default',
+}: {
+  title: string;
+  body: string;
+  tone?: 'default' | 'warning';
+}) {
   return (
     <View style={[styles.notice, tone === 'warning' && styles.noticeWarning]}>
       <Text style={styles.noticeTitle}>{title}</Text>
@@ -82,27 +131,297 @@ export function InlineNotice({ title, body, tone = 'default' }: { title: string;
   );
 }
 
-export function LoadingBlock({ label }: { label: string }) {
+function BaseButton({
+  children,
+  kind,
+  stretch = true,
+  onPress,
+  style,
+  ...props
+}: PressableProps & { children: ReactNode; kind: 'primary' | 'secondary'; stretch?: boolean }) {
+  const handlePress = async (event: GestureResponderEvent) => {
+    await Haptics.impactAsync(kind === 'primary' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light);
+    onPress?.(event);
+  };
+
   return (
-    <View style={styles.loading}>
-      <ActivityIndicator size="large" color={colors.accent} />
-      <Text style={styles.loadingLabel}>{label}</Text>
+    <Pressable
+      {...props}
+      onPress={handlePress}
+      style={({ pressed }) => [
+        styles.button,
+        kind === 'primary' ? styles.buttonPrimary : styles.buttonSecondary,
+        !stretch && styles.buttonAuto,
+        pressed && styles.buttonPressed,
+        typeof style === 'function' ? style({ pressed }) : style,
+      ]}
+    >
+      <Text style={kind === 'primary' ? styles.buttonPrimaryLabel : styles.buttonSecondaryLabel}>{children}</Text>
+    </Pressable>
+  );
+}
+
+export function PrimaryButton(props: PressableProps & { children: ReactNode; stretch?: boolean }) {
+  return <BaseButton {...props} kind="primary" />;
+}
+
+export function SecondaryButton(props: PressableProps & { children: ReactNode; stretch?: boolean }) {
+  return <BaseButton {...props} kind="secondary" />;
+}
+
+export function IconButton({
+  icon,
+  onPress,
+  tone = 'surface',
+  size = 22,
+}: {
+  icon: IoniconName;
+  onPress?: () => void;
+  tone?: 'surface' | 'ghost' | 'light';
+  size?: number;
+}) {
+  const handlePress = async () => {
+    await Haptics.selectionAsync();
+    onPress?.();
+  };
+
+  return (
+    <Pressable onPress={handlePress} style={({ pressed }) => [styles.iconButton, tone === 'ghost' && styles.iconButtonGhost, tone === 'light' && styles.iconButtonLight, pressed && styles.iconButtonPressed]}>
+      <Ionicons
+        name={icon}
+        size={size}
+        color={tone === 'light' ? colors.white : colors.ink}
+      />
+    </Pressable>
+  );
+}
+
+export function FloatingActionButton({ onPress }: { onPress?: () => void }) {
+  const insets = useSafeAreaInsets();
+
+  const handlePress = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onPress?.();
+  };
+
+  return (
+    <Pressable onPress={handlePress} style={({ pressed }) => [styles.fab, { bottom: insets.bottom + 18 }, pressed && styles.buttonPressed]}>
+      <Ionicons name="qr-code-outline" size={24} color={colors.whiteSoft} />
+    </Pressable>
+  );
+}
+
+export function ToggleRow({
+  title,
+  body,
+  value,
+  onValueChange,
+}: {
+  title: string;
+  body: string;
+  value: boolean;
+  onValueChange: SwitchProps['onValueChange'];
+}) {
+  const handleValueChange: SwitchProps['onValueChange'] = async (next) => {
+    await Haptics.selectionAsync();
+    onValueChange?.(next);
+  };
+
+  return (
+    <View style={styles.toggleRow}>
+      <View style={styles.toggleCopy}>
+        <Text style={styles.toggleTitle}>{title}</Text>
+        <Text style={styles.toggleBody}>{body}</Text>
+      </View>
+      <Switch value={value} onValueChange={handleValueChange} />
     </View>
   );
 }
 
-export function EmptyState({ title, body }: { title: string; body: string }) {
+export function SkeletonBlock({
+  width = '100%',
+  height = 16,
+  radiusValue = radius.md,
+}: {
+  width?: number | `${number}%`;
+  height?: number;
+  radiusValue?: number;
+}) {
+  const translateX = useRef(new Animated.Value(-160)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(translateX, {
+        toValue: 220,
+        duration: 1200,
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [translateX]);
+
   return (
-    <Card>
+    <View style={[styles.skeletonBase, { width, height, borderRadius: radiusValue }]}>
+      <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateX }] }]}>
+        <LinearGradient
+          colors={['transparent', 'rgba(255,255,255,0.55)', 'transparent']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.skeletonShimmer}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+export function LoadingBlock({ label }: { label: string }) {
+  return (
+    <View style={styles.loading}>
+      <View style={styles.loadingCard}>
+        <ActivityIndicator size="small" color={colors.accent} />
+        <Text style={styles.loadingLabel}>{label}</Text>
+        <SkeletonBlock height={22} />
+        <SkeletonBlock width="72%" />
+        <SkeletonBlock width="56%" />
+      </View>
+    </View>
+  );
+}
+
+export function EmptyState({
+  title,
+  body,
+  action,
+}: {
+  title: string;
+  body: string;
+  action?: ReactNode;
+}) {
+  return (
+    <Card style={styles.emptyState}>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
+      {action}
     </Card>
   );
 }
 
+export function StickyButton({
+  label,
+  preview,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  preview?: string;
+  disabled?: boolean;
+  onPress?: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View pointerEvents="box-none" style={styles.stickyWrap}>
+      <LinearGradient
+        colors={['rgba(243,236,226,0)', colors.background]}
+        style={[styles.stickyGradient, { paddingBottom: insets.bottom + spacing.sm }]}
+      >
+        <View style={styles.stickyInner}>
+          {preview ? <Text style={styles.stickyPreview}>{preview}</Text> : null}
+          <PrimaryButton onPress={onPress} disabled={disabled} style={disabled ? styles.buttonDisabled : undefined}>
+            {label}
+          </PrimaryButton>
+        </View>
+      </LinearGradient>
+    </View>
+  );
+}
+
+export function BottomSheet({
+  visible,
+  onClose,
+  title,
+  children,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  title?: string;
+  children: ReactNode;
+}) {
+  const translateY = useRef(new Animated.Value(420)).current;
+
+  useEffect(() => {
+    if (!visible) {
+      translateY.setValue(420);
+      return;
+    }
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      damping: timing.spring.damping,
+      stiffness: timing.spring.stiffness,
+      mass: 0.8,
+    }).start();
+  }, [translateY, visible]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 6,
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy > 0) translateY.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 120) {
+          onClose();
+          return;
+        }
+        Animated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          damping: timing.spring.damping,
+          stiffness: timing.spring.stiffness,
+          mass: 0.8,
+        }).start();
+      },
+    }),
+  ).current;
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Pressable style={styles.sheetBackdrop} onPress={onClose} />
+      <Animated.View style={[styles.sheetWrap, { transform: [{ translateY }] }]} {...panResponder.panHandlers}>
+        <View style={styles.sheetHandle} />
+        {title ? <Text style={styles.sheetTitle}>{title}</Text> : null}
+        <View style={styles.sheetContent}>{children}</View>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+const toneStyles: Record<'default' | 'accent' | 'warning' | 'success', { pill: ViewStyle; label: TextStyle }> = {
+  default: {
+    pill: { backgroundColor: colors.surfaceMuted },
+    label: { color: colors.inkMuted },
+  },
+  accent: {
+    pill: { backgroundColor: colors.accentSoft },
+    label: { color: colors.accentPressed },
+  },
+  warning: {
+    pill: { backgroundColor: colors.warningSoft },
+    label: { color: colors.warning },
+  },
+  success: {
+    pill: { backgroundColor: colors.successSoft },
+    label: { color: colors.success },
+  },
+};
+
 const styles = StyleSheet.create({
   screen: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
     gap: spacing.md,
     backgroundColor: colors.background,
     minHeight: '100%',
@@ -110,130 +429,278 @@ const styles = StyleSheet.create({
   titleWrap: {
     gap: spacing.xs,
   },
-  title: {
-    fontSize: 32,
-    lineHeight: 36,
-    fontWeight: '800',
+  pageTitle: {
+    ...typography.displaySm,
     color: colors.ink,
   },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
+  pageSubtitle: {
+    ...typography.bodySm,
     color: colors.inkMuted,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    ...typography.overline,
     color: colors.inkMuted,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 22,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
     gap: spacing.sm,
   },
+  cardElevated: {
+    backgroundColor: colors.surfaceElevated,
+    ...shadows.md,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    width: '100%',
+  },
+  pill: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  pillLabel: {
+    ...typography.caption,
+  },
+  chip: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+  },
+  chipSelected: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+  },
+  chipPressed: {
+    transform: [{ scale: 0.97 }],
+  },
+  chipLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  chipLabelSelected: {
+    color: colors.accentPressed,
+  },
+  statPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    gap: spacing.xxs,
+  },
+  statValue: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  statLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  notice: {
+    borderRadius: radius.md,
+    padding: spacing.md,
+    backgroundColor: colors.tealSoft,
+    gap: spacing.xxs,
+  },
+  noticeWarning: {
+    backgroundColor: colors.warningSoft,
+  },
+  noticeTitle: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  noticeBody: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
   button: {
-    borderRadius: 18,
-    minHeight: 54,
+    borderRadius: radius.md,
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
+    transform: [{ scale: 1 }],
+  },
+  buttonAuto: {
+    alignSelf: 'flex-start',
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.97 }],
   },
   buttonPrimary: {
     backgroundColor: colors.accent,
-  },
-  buttonPrimaryPressed: {
-    backgroundColor: colors.accentPressed,
+    ...shadows.sm,
   },
   buttonSecondary: {
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  buttonSecondaryPressed: {
-    backgroundColor: '#e5d6c2',
+  buttonDisabled: {
+    opacity: 0.45,
   },
   buttonPrimaryLabel: {
-    color: '#fff7ef',
-    fontSize: 16,
-    fontWeight: '800',
+    ...typography.headingSm,
+    color: colors.whiteSoft,
   },
   buttonSecondaryLabel: {
-    color: colors.ink,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  pill: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.surfaceMuted,
-  },
-  pillAccent: {
-    backgroundColor: '#fde2d8',
-  },
-  pillWarning: {
-    backgroundColor: '#f7ead3',
-  },
-  pillSuccess: {
-    backgroundColor: '#d8ecdf',
-  },
-  pillLabel: {
-    color: colors.inkMuted,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  pillLabelAccent: {
-    color: colors.accentPressed,
-  },
-  pillLabelWarning: {
-    color: colors.warning,
-  },
-  pillLabelSuccess: {
-    color: colors.success,
-  },
-  notice: {
-    borderRadius: 18,
-    padding: spacing.md,
-    backgroundColor: '#e8f0ea',
-    gap: 4,
-  },
-  noticeWarning: {
-    backgroundColor: '#f7ead3',
-  },
-  noticeTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    ...typography.headingSm,
     color: colors.ink,
   },
-  noticeBody: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.inkMuted,
-  },
-  loading: {
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xl,
-    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    ...shadows.sm,
+  },
+  iconButtonGhost: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  iconButtonLight: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.24)',
+  },
+  iconButtonPressed: {
+    transform: [{ scale: 0.95 }],
+  },
+  fab: {
+    position: 'absolute',
+    alignSelf: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: radius.full,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: colors.background,
+    ...shadows.lg,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  toggleCopy: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  toggleTitle: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  toggleBody: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  skeletonBase: {
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceMuted,
+  },
+  skeletonShimmer: {
+    width: 120,
+    height: '100%',
+  },
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    backgroundColor: colors.background,
+  },
+  loadingCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadows.md,
   },
   loadingLabel: {
+    ...typography.bodyLg,
     color: colors.inkMuted,
-    fontSize: 15,
+  },
+  emptyState: {
+    alignItems: 'flex-start',
   },
   emptyTitle: {
+    ...typography.headingLg,
     color: colors.ink,
-    fontSize: 18,
-    fontWeight: '800',
   },
   emptyBody: {
+    ...typography.bodySm,
     color: colors.inkMuted,
-    fontSize: 14,
-    lineHeight: 20,
+  },
+  stickyWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  stickyGradient: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xl,
+  },
+  stickyInner: {
+    gap: spacing.xs,
+  },
+  stickyPreview: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    textAlign: 'center',
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay,
+  },
+  sheetWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+    gap: spacing.md,
+    ...shadows.lg,
+  },
+  sheetHandle: {
+    width: 52,
+    height: 5,
+    borderRadius: radius.full,
+    backgroundColor: colors.divider,
+    alignSelf: 'center',
+  },
+  sheetTitle: {
+    ...typography.headingLg,
+    color: colors.ink,
+  },
+  sheetContent: {
+    gap: spacing.md,
   },
 });

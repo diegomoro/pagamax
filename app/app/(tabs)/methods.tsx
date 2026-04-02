@@ -1,125 +1,218 @@
-import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { Card, LoadingBlock, PageTitle, Pill, ScreenScroll, SecondaryButton } from '@/components/ui';
+import * as Haptics from 'expo-haptics';
+import { memo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import type { StoredPaymentMethod } from '@/types/app';
+import { ProviderIcon } from '@/components/provider-icon';
+import { BottomSheet, Chip, EmptyState, IconButton, LoadingBlock, ScreenScroll, SecondaryButton } from '@/components/ui';
 import { usePagamax } from '@/context/pagamax-context';
-import { colors, spacing } from '@/lib/theme';
+import { colors, radius, spacing, typography } from '@/lib/theme';
 
-const BRAND_OPTIONS = ['Visa', 'Mastercard', 'Amex', 'Cabal', ''];
-const TYPE_OPTIONS = ['credit', 'debit', 'prepaid', 'account_money', ''];
+const BRAND_OPTIONS = ['Visa', 'Mastercard', 'Amex', 'Cabal'];
+const TYPE_OPTIONS: Array<NonNullable<StoredPaymentMethod['cardType']>> = ['credit', 'debit', 'prepaid', 'account_money'];
+
+const MethodRow = memo(function MethodRow({
+  expanded,
+  method,
+  onExpand,
+  onLabelChange,
+  onToggle,
+  onSelectBrand,
+  onSelectType,
+}: {
+  expanded: boolean;
+  method: StoredPaymentMethod;
+  onExpand: () => void;
+  onLabelChange: (value: string) => void;
+  onToggle: () => void;
+  onSelectBrand: (value?: string) => void;
+  onSelectType: (value?: StoredPaymentMethod['cardType']) => void;
+}) {
+  return (
+    <Pressable onPress={onExpand} style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}>
+      <View style={styles.rowMain}>
+        <ProviderIcon provider={method.provider} />
+        <View style={styles.copy}>
+          <Text style={styles.label}>{method.label}</Text>
+          <Text style={styles.meta}>{method.provider} · {method.rail}</Text>
+        </View>
+        <Switch value={method.enabled} onValueChange={onToggle} />
+      </View>
+
+      {expanded ? (
+        <View style={styles.accordion}>
+          <TextInput
+            style={styles.input}
+            value={method.label}
+            onChangeText={onLabelChange}
+            placeholder="Etiqueta visible"
+            placeholderTextColor={colors.inkMuted}
+          />
+
+          <View style={styles.group}>
+            <Text style={styles.groupTitle}>Marca</Text>
+            <View style={styles.chips}>
+              {BRAND_OPTIONS.map((option) => (
+                <Chip key={option} label={option} selected={method.cardBrand === option} onPress={() => onSelectBrand(option)} />
+              ))}
+              <Chip label="Sin marca" selected={!method.cardBrand} onPress={() => onSelectBrand(undefined)} />
+            </View>
+          </View>
+
+          <View style={styles.group}>
+            <Text style={styles.groupTitle}>Tipo</Text>
+            <View style={styles.chips}>
+              {TYPE_OPTIONS.map((option) => (
+                <Chip key={option} label={option} selected={method.cardType === option} onPress={() => onSelectType(option)} />
+              ))}
+              <Chip label="Sin tipo" selected={!method.cardType} onPress={() => onSelectType(undefined)} />
+            </View>
+          </View>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+});
 
 export default function MethodsScreen() {
   const { loading, methods, resetMethods, toggleMethodEnabled, updateMethod } = usePagamax();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (loading) {
-    return <LoadingBlock label="Cargando métodos guardados..." />;
+    return <LoadingBlock label="Cargando medios guardados..." />;
+  }
+
+  const activeCount = methods.filter((method) => method.enabled).length;
+
+  const handleToggle = async (id: string) => {
+    await Haptics.selectionAsync();
+    toggleMethodEnabled(id);
+  };
+
+  if (methods.length === 0) {
+    return (
+      <ScreenScroll>
+        <EmptyState title="Todavia no hay medios cargados" body="Restaura las plantillas demo para empezar a comparar." action={<SecondaryButton onPress={() => void resetMethods()}>Restaurar</SecondaryButton>} />
+      </ScreenScroll>
+    );
   }
 
   return (
-    <ScreenScroll>
-      <PageTitle title="Tus métodos" subtitle="Editá solo lo necesario para que el ranking sea útil en tu teléfono." />
-      <SecondaryButton onPress={() => void resetMethods()}>Restaurar plantillas demo</SecondaryButton>
-
-      {methods.map(method => (
-        <Card key={method.id}>
-          <View style={styles.row}>
-            <View style={styles.copy}>
-              <Text style={styles.title}>{method.provider}</Text>
-              <Text style={styles.caption}>ID: {method.id}</Text>
-            </View>
-            <Switch value={method.enabled} onValueChange={() => toggleMethodEnabled(method.id)} />
+    <>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <View style={styles.headerCopy}>
+            <Text style={styles.title}>Tus medios de pago</Text>
+            <Text style={styles.subtitle}>{activeCount} activos de {methods.length}</Text>
           </View>
+          <IconButton icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
+        </View>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Etiqueta visible</Text>
-            <TextInput
-              style={styles.input}
-              value={method.label}
-              onChangeText={(value) => updateMethod(method.id, { label: value })}
-              placeholder="Ej. MODO + Santander Visa crédito"
-              placeholderTextColor={colors.inkMuted}
+        <FlatList
+          data={methods}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <MethodRow
+              expanded={expandedId === item.id}
+              method={item}
+              onExpand={() => setExpandedId((prev) => prev === item.id ? null : item.id)}
+              onLabelChange={(value) => updateMethod(item.id, { label: value })}
+              onToggle={() => void handleToggle(item.id)}
+              onSelectBrand={(value) => updateMethod(item.id, { cardBrand: value })}
+              onSelectType={(value) => updateMethod(item.id, { cardType: value })}
             />
-          </View>
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
 
-          <View style={styles.row}>
-            <Pill label={`Rail: ${method.rail}`} />
-            <Pill label={method.enabled ? 'Activo' : 'Desactivado'} tone={method.enabled ? 'success' : 'warning'} />
-          </View>
-
-          <View style={styles.optionGroup}>
-            <Text style={styles.label}>Marca</Text>
-            <View style={styles.optionRow}>
-              {BRAND_OPTIONS.map(option => (
-                <SecondaryButton
-                  key={option || 'none'}
-                  onPress={() => updateMethod(method.id, { cardBrand: option || undefined })}
-                >
-                  {option || 'Sin marca'}
-                </SecondaryButton>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.optionGroup}>
-            <Text style={styles.label}>Tipo</Text>
-            <View style={styles.optionRow}>
-              {TYPE_OPTIONS.map(option => (
-                <SecondaryButton
-                  key={option || 'none'}
-                  onPress={() => updateMethod(method.id, { cardType: option ? option as typeof method.cardType : undefined })}
-                >
-                  {option || 'Sin tipo'}
-                </SecondaryButton>
-              ))}
-            </View>
-          </View>
-        </Card>
-      ))}
-    </ScreenScroll>
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title="Acciones">
+        <SecondaryButton onPress={() => void resetMethods()}>Restaurar plantillas demo</SecondaryButton>
+      </BottomSheet>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+  },
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  headerCopy: {
+    gap: spacing.xxs,
+  },
+  title: {
+    ...typography.displaySm,
+    color: colors.ink,
+  },
+  subtitle: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  list: {
+    paddingBottom: 132,
+  },
+  rowCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
     gap: spacing.md,
+  },
+  rowPressed: {
+    transform: [{ scale: 0.988 }],
+  },
+  rowMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   copy: {
     flex: 1,
-    gap: 4,
-  },
-  title: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '800',
-    textTransform: 'capitalize',
-  },
-  caption: {
-    color: colors.inkMuted,
-    fontSize: 12,
-  },
-  fieldGroup: {
-    gap: spacing.xs,
+    gap: spacing.xxs,
   },
   label: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  meta: {
+    ...typography.caption,
     color: colors.inkMuted,
-    fontSize: 13,
-    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  accordion: {
+    gap: spacing.md,
   },
   input: {
-    minHeight: 50,
-    borderRadius: 16,
+    minHeight: 52,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#fffdf8',
+    borderColor: colors.divider,
+    backgroundColor: colors.surfaceSoft,
     color: colors.ink,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    ...typography.bodyLg,
   },
-  optionGroup: {
-    gap: spacing.sm,
+  group: {
+    gap: spacing.xs,
   },
-  optionRow: {
+  groupTitle: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,

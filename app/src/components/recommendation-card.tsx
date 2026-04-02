@@ -1,122 +1,278 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { PaymentRecommendation } from '@pagamax/core';
-import { Card, Pill, SecondaryButton } from '@/components/ui';
+import { ConfidenceBadge } from '@/components/confidence-badge';
+import { ProviderIcon } from '@/components/provider-icon';
+import { RecommendationBreakdown } from '@/components/recommendation-breakdown';
+import { Pill, PrimaryButton, SecondaryButton } from '@/components/ui';
 import { formatArs } from '@/lib/format';
-import { colors, spacing } from '@/lib/theme';
+import { colors, radius, shadows, spacing, typography } from '@/lib/theme';
+import type { ConfidenceInfo } from '@/types/app';
 
-interface RecommendationCardProps {
-  recommendation: PaymentRecommendation;
-  appLabel: string;
-  handoffLabel: string;
-  onPressDetails: () => void;
-  onPressHandoff: () => void;
+function valueTypeLabel(valueType: PaymentRecommendation['valueType']): string {
+  if (valueType === 'cashback') return 'Reintegro';
+  if (valueType === 'financing_estimate') return 'Cuotas';
+  return 'Descuento';
 }
 
-export function RecommendationCard({
+function useEntrance(delay: number) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 260,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 260,
+        delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [delay, opacity, translateY]);
+
+  return {
+    opacity,
+    transform: [{ translateY }],
+  };
+}
+
+export const HeroRecommendationCard = memo(function HeroRecommendationCard({
   recommendation,
-  appLabel,
+  confidence,
+  grossSavingsArs,
+  pagamaxFeeArs,
+  netSavingsArs,
+  qualifiers,
+  dataDateLabel,
   handoffLabel,
   onPressDetails,
   onPressHandoff,
-}: RecommendationCardProps) {
+  onPressPrimary,
+  delay = 0,
+}: {
+  recommendation: PaymentRecommendation;
+  confidence: ConfidenceInfo;
+  grossSavingsArs: number;
+  pagamaxFeeArs: number;
+  netSavingsArs: number;
+  qualifiers: string[];
+  dataDateLabel: string;
+  handoffLabel: string;
+  onPressDetails: () => void;
+  onPressHandoff: () => void;
+  onPressPrimary: () => void;
+  delay?: number;
+}) {
+  const animatedStyle = useEntrance(delay);
+  const counter = useRef(new Animated.Value(0)).current;
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const listener = counter.addListener(({ value }) => setDisplayValue(value));
+    Animated.timing(counter, {
+      toValue: netSavingsArs,
+      duration: 600,
+      delay,
+      useNativeDriver: false,
+    }).start();
+    return () => counter.removeListener(listener);
+  }, [counter, delay, netSavingsArs]);
+
   return (
-    <Pressable onPress={onPressDetails}>
-      <Card>
-        <View style={styles.header}>
-          <View style={styles.valueWrap}>
-            <Text style={styles.value}>{formatArs(recommendation.estimatedSavingsArs)}</Text>
-            <Text style={styles.caption}>Ahorro estimado</Text>
-          </View>
-          <View style={styles.badges}>
-            <Pill label={recommendation.source === 'merchant' ? 'Comercio' : 'General'} tone="accent" />
-            <Pill label={recommendation.valueType === 'cashback' ? 'Reintegro' : recommendation.valueType === 'discount' ? 'Descuento' : 'Cuotas'} />
+    <Animated.View style={[styles.heroCard, animatedStyle]}>
+      <View style={styles.heroHeader}>
+        <View style={styles.heroLeft}>
+          <ProviderIcon provider={recommendation.method.provider} size={48} />
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroMethod}>{recommendation.method.label}</Text>
+            <Text style={styles.heroPromo}>{recommendation.promo.promo_title}</Text>
           </View>
         </View>
+        <Pill label={valueTypeLabel(recommendation.valueType)} tone="accent" />
+      </View>
 
-        <View style={styles.body}>
-          <Text style={styles.method}>{recommendation.method.label}</Text>
-          <Text style={styles.promo}>{recommendation.promo.promo_title}</Text>
-          <Text style={styles.netPay}>Pagás aprox. {formatArs(recommendation.estimatedNetPaymentArs)}</Text>
-        </View>
+      <View style={styles.heroValueWrap}>
+        <Text style={styles.heroValue}>{formatArs(displayValue)}</Text>
+        <Text style={styles.heroCaption}>You keep estimado</Text>
+      </View>
 
-        <View style={styles.reasons}>
-          {recommendation.reasons.slice(0, 2).map(reason => (
-            <Text key={reason} style={styles.reason}>• {reason}</Text>
-          ))}
-          {recommendation.warnings[0] ? (
-            <Text style={styles.warning}>Advertencia: {recommendation.warnings[0]}</Text>
-          ) : null}
-        </View>
+      <RecommendationBreakdown
+        grossSavingsArs={grossSavingsArs}
+        pagamaxFeeArs={pagamaxFeeArs}
+        netSavingsArs={netSavingsArs}
+        confidence={confidence}
+      />
 
-        <View style={styles.footer}>
-          <Text style={styles.appHint}>{appLabel}</Text>
+      <View style={styles.qualifiers}>
+        {qualifiers.slice(0, 3).map((qualifier) => (
+          <Text key={qualifier} style={styles.qualifier}>+ {qualifier}</Text>
+        ))}
+      </View>
+
+      <Text style={styles.heroTrust}>Reglas y ahorro estimado vigentes al {dataDateLabel}</Text>
+
+      <View style={styles.heroActions}>
+        <PrimaryButton onPress={onPressPrimary}>Proceed with this route</PrimaryButton>
+        <View style={styles.heroSecondary}>
+          <SecondaryButton onPress={onPressDetails}>Ver detalle</SecondaryButton>
           <SecondaryButton onPress={onPressHandoff}>{handoffLabel}</SecondaryButton>
         </View>
-      </Card>
-    </Pressable>
+      </View>
+    </Animated.View>
   );
-}
+});
+
+export const CompactRecommendationRow = memo(function CompactRecommendationRow({
+  recommendation,
+  rank,
+  netSavingsArs,
+  onPress,
+  delay = 0,
+}: {
+  recommendation: PaymentRecommendation;
+  rank: number;
+  netSavingsArs: number;
+  onPress: () => void;
+  delay?: number;
+}) {
+  const animatedStyle = useEntrance(delay);
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Pressable onPress={onPress} style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}>
+        <View style={styles.rankCircle}>
+          <Text style={styles.rankLabel}>{rank}</Text>
+        </View>
+        <View style={styles.rowCopy}>
+          <Text numberOfLines={1} style={styles.rowMethod}>{recommendation.method.label}</Text>
+          <Text numberOfLines={1} style={styles.rowPromo}>{recommendation.promo.promo_title}</Text>
+        </View>
+        <View style={styles.rowRight}>
+          <Text style={styles.rowValue}>{formatArs(netSavingsArs)}</Text>
+          <Text style={styles.rowHint}>you keep</Text>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+});
 
 const styles = StyleSheet.create({
-  header: {
+  heroCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.md,
+    ...shadows.md,
+  },
+  heroHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  valueWrap: {
-    gap: 2,
-  },
-  value: {
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: '900',
-    color: colors.teal,
-  },
-  caption: {
-    color: colors.inkMuted,
-    fontSize: 13,
-  },
-  badges: {
-    alignItems: 'flex-end',
-    gap: spacing.xs,
-  },
-  body: {
-    gap: 4,
-  },
-  method: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  promo: {
-    color: colors.inkMuted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  netPay: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  reasons: {
-    gap: 4,
-  },
-  reason: {
-    color: colors.inkMuted,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  warning: {
-    color: colors.warning,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '700',
-  },
-  footer: {
+  heroLeft: {
+    flex: 1,
+    flexDirection: 'row',
     gap: spacing.sm,
   },
-  appHint: {
+  heroCopy: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  heroMethod: {
+    ...typography.headingLg,
+    color: colors.ink,
+  },
+  heroPromo: {
+    ...typography.bodySm,
     color: colors.inkMuted,
-    fontSize: 13,
+  },
+  heroValueWrap: {
+    gap: spacing.xxs,
+  },
+  heroValue: {
+    ...typography.displayLg,
+    color: colors.teal,
+  },
+  heroCaption: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  qualifiers: {
+    gap: spacing.xxs,
+  },
+  qualifier: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  heroTrust: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  heroActions: {
+    gap: spacing.sm,
+  },
+  heroSecondary: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  rowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  rowPressed: {
+    transform: [{ scale: 0.985 }],
+  },
+  rankCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  rankLabel: {
+    ...typography.caption,
+    color: colors.ink,
+  },
+  rowCopy: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  rowMethod: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  rowPromo: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  rowRight: {
+    alignItems: 'flex-end',
+    gap: spacing.xxs,
+  },
+  rowValue: {
+    ...typography.headingSm,
+    color: colors.teal,
+  },
+  rowHint: {
+    ...typography.caption,
+    color: colors.inkMuted,
   },
 });
