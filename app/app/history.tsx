@@ -37,19 +37,19 @@ export default function HistoryScreen() {
           <View style={styles.headerWrap}>
             <View style={styles.topBar}>
               <IconButton icon="arrow-back" onPress={() => router.back()} />
-              <Text style={styles.title}>Savings history</Text>
+              <Text style={styles.title}>Historial de ahorro</Text>
               <View style={{ width: 44 }} />
             </View>
 
             <View style={styles.summaryRow}>
-              <SavingsSummaryCard icon="calendar-outline" label="Month" value={`$${summary.monthlyNetSavingsArs.toLocaleString('es-AR')}`} footnote="neto para vos" tone="teal" />
-              <SavingsSummaryCard icon="wallet-outline" label="Lifetime" value={`$${summary.lifetimeNetSavingsArs.toLocaleString('es-AR')}`} footnote="acumulado" />
+              <SavingsSummaryCard icon="calendar-outline" label="Mes" value={`$${summary.monthlyNetSavingsArs.toLocaleString('es-AR')}`} footnote="neto para vos" tone="teal" />
+              <SavingsSummaryCard icon="wallet-outline" label="Acumulado" value={`$${summary.lifetimeNetSavingsArs.toLocaleString('es-AR')}`} footnote="neto historico" />
             </View>
 
-            <SectionHeader title="Activity" subtitle="Filtra por periodo o categoria para revisar donde rinde mejor Pagamax." />
+            <SectionHeader title="Actividad" subtitle="Filtra por periodo o categoria para revisar donde ahorraste mas." />
             <View style={styles.filters}>
-              <Chip label="All" selected={filter === 'all'} onPress={() => setFilter('all')} />
-              <Chip label="This month" selected={filter === 'month'} onPress={() => setFilter('month')} />
+              <Chip label="Todo" selected={filter === 'all'} onPress={() => setFilter('all')} />
+              <Chip label="Este mes" selected={filter === 'month'} onPress={() => setFilter('month')} />
               <Chip label="Supermercados" selected={filter === 'supermercados'} onPress={() => setFilter('supermercados')} />
               <Chip label="Farmacia" selected={filter === 'farmacia'} onPress={() => setFilter('farmacia')} />
               <Chip label="Combustible" selected={filter === 'combustible'} onPress={() => setFilter('combustible')} />

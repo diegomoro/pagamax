@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { IconButton } from '@/components/ui';
 import { MerchantCard } from '@/components/merchant-card';
@@ -16,7 +16,7 @@ export default function OpportunitiesScreen() {
     const normalized = query.trim().toLowerCase();
     return DEMO_OPPORTUNITIES.filter((item) => {
       const matchesQuery = !normalized || item.merchantName.toLowerCase().includes(normalized) || item.category.toLowerCase().includes(normalized);
-      const matchesSurface = settings.surfacePreferences.travel || item.category !== 'Travel';
+      const matchesSurface = settings.surfacePreferences.travel || item.category !== 'Viajes';
       return matchesQuery && matchesSurface;
     });
   }, [query, settings.surfacePreferences.travel]);
@@ -31,10 +31,10 @@ export default function OpportunitiesScreen() {
           <View style={styles.headerWrap}>
             <View style={styles.topBar}>
               <IconButton icon="arrow-back" onPress={() => router.back()} />
-              <Text style={styles.title}>Merchant opportunities</Text>
+              <Text style={styles.title}>Comercios para pagar menos</Text>
               <View style={{ width: 44 }} />
             </View>
-            <SectionHeader title="Nearby and high-fit merchants" subtitle="Explora donde Pagamax suele rendir con tus medios actuales." />
+            <SectionHeader title="Oportunidades cercanas" subtitle="Explora donde Paga Menos suele rendir con tus medios activos." />
             <View style={styles.searchWrap}>
               <TextInput
                 style={styles.searchInput}

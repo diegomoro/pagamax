@@ -22,7 +22,7 @@ export function MerchantCard({
             <Text style={styles.title}>{merchant.merchantName}</Text>
             <Text style={styles.meta}>
               {merchant.category}
-              {merchant.distanceLabel ? ` · ${merchant.distanceLabel}` : ''}
+              {merchant.distanceLabel ? ` - ${merchant.distanceLabel}` : ''}
             </Text>
           </View>
         </View>
@@ -31,7 +31,7 @@ export function MerchantCard({
 
       <View style={styles.values}>
         <Text style={styles.netValue}>{formatArs(merchant.likelyNetSavingsArs)}</Text>
-        <Text style={styles.valueCaption}>You keep estimado</Text>
+        <Text style={styles.valueCaption}>Ahorro neto estimado</Text>
       </View>
 
       <Text style={styles.reason}>{merchant.reason}</Text>

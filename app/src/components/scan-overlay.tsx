@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
 export function ScanOverlay({ success = false, error = false }: { success?: boolean; error?: boolean }) {
   const pulse = useRef(new Animated.Value(0.45)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -20,10 +22,9 @@ export function ScanOverlay({ success = false, error = false }: { success?: bool
   const frameColor = success ? colors.teal : error ? colors.danger : colors.white;
 
   return (
-    <View pointerEvents="none" style={styles.overlay}>
+    <View pointerEvents="none" style={[styles.overlay, { paddingTop: insets.top + spacing.xxl }]}>
       <View style={styles.topCopy}>
-        <Text style={styles.title}>Apunta al QR del comercio</Text>
-        <Text style={styles.body}>Leemos el QR solo para calcular promociones en tu telefono.</Text>
+        <Text style={styles.title}>Escanear QR</Text>
       </View>
 
       <View style={styles.center}>
@@ -31,8 +32,6 @@ export function ScanOverlay({ success = false, error = false }: { success?: bool
           {success ? <Ionicons name="checkmark-circle" size={34} color={colors.teal} /> : null}
         </Animated.View>
       </View>
-
-      <Text style={styles.footer}>Busca que el codigo quede dentro del marco.</Text>
     </View>
   );
 }
@@ -48,18 +47,11 @@ const styles = StyleSheet.create({
   },
   topCopy: {
     alignItems: 'center',
-    gap: spacing.xs,
   },
   title: {
     ...typography.headingLg,
     color: colors.white,
     textAlign: 'center',
-  },
-  body: {
-    ...typography.bodySm,
-    color: colors.whiteSoft,
-    textAlign: 'center',
-    maxWidth: 280,
   },
   center: {
     alignItems: 'center',
@@ -74,10 +66,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  footer: {
-    ...typography.caption,
-    color: colors.whiteSoft,
-    textAlign: 'center',
   },
 });

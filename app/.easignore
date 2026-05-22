@@ -1,0 +1,11 @@
+# Keep EAS archives small and deterministic.
+../tmp/
+../scraper/output*/
+../scraper/tmp/
+../scraper/.cache/
+../app/web-dist/
+../app/dist-android-test/
+web-dist/
+dist-android-test/
+.expo/
+node_modules/

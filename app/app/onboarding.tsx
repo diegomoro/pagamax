@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { BrandLockup } from '@/components/brand-lockup';
 import { ONBOARDING_PAGES } from '@/lib/demo-data';
-import { BottomSheet, Card, Chip, PrimaryButton, ScreenScroll, SecondaryButton, ToggleRow } from '@/components/ui';
+import { Card, Chip, PrimaryButton, ScreenScroll, SecondaryButton, ToggleRow } from '@/components/ui';
 import { usePagamax } from '@/context/pagamax-context';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
@@ -25,25 +26,31 @@ export default function OnboardingScreen() {
       </View>
 
       <Card elevated style={styles.hero}>
+        <BrandLockup showHolding />
         <Text style={styles.title}>{current.title}</Text>
         <Text style={styles.body}>{current.body}</Text>
+        <View style={styles.benefits}>
+          <Chip label="Ahorro bruto claro" selected />
+          <Chip label="Fee visible" selected />
+          <Chip label="Confianza y caveats" selected />
+        </View>
       </Card>
 
       <View style={styles.exampleRow}>
         <Chip label="Farmacia" selected={step === 0} />
         <Chip label="Combustible" selected={step === 1} />
-        <Chip label="Checkout link" selected={step === 2} />
+        <Chip label="Link de pago" selected={step === 2} />
       </View>
 
       <Card style={styles.permissions}>
         <ToggleRow
-          title="Nearby savings"
+          title="Ahorro cercano"
           body="Activa sugerencias cercanas cuando te convenga. Pediremos permiso real solo cuando haga falta."
           value={settings.locationInsightsEnabled}
           onValueChange={(value) => updateSettings({ locationInsightsEnabled: value })}
         />
         <ToggleRow
-          title="High-value notifications"
+          title="Alertas de alto valor"
           body="Avisos solo si superan tu umbral y pueden ahorrarte tiempo o dinero real."
           value={settings.notificationsEnabled}
           onValueChange={(value) => updateSettings({ notificationsEnabled: value })}
@@ -53,13 +60,13 @@ export default function OnboardingScreen() {
       <View style={styles.footer}>
         {step < ONBOARDING_PAGES.length - 1 ? (
           <>
-            <PrimaryButton onPress={() => setStep((prev) => prev + 1)}>Next</PrimaryButton>
-            <SecondaryButton onPress={finish}>Skip and start</SecondaryButton>
+            <PrimaryButton onPress={() => setStep((prev) => prev + 1)}>Siguiente</PrimaryButton>
+            <SecondaryButton onPress={finish}>Omitir y empezar</SecondaryButton>
           </>
         ) : (
           <>
-            <PrimaryButton onPress={finish}>Start using Pagamax</PrimaryButton>
-            <SecondaryButton onPress={() => setStep((prev) => Math.max(0, prev - 1))}>Back</SecondaryButton>
+            <PrimaryButton onPress={finish}>Empezar a usar Paga Menos</PrimaryButton>
+            <SecondaryButton onPress={() => setStep((prev) => Math.max(0, prev - 1))}>Atras</SecondaryButton>
           </>
         )}
       </View>
@@ -89,6 +96,11 @@ const styles = StyleSheet.create({
   },
   hero: {
     gap: spacing.md,
+  },
+  benefits: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   title: {
     ...typography.displayLg,

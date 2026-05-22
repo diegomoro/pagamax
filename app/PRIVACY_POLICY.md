@@ -1,24 +1,28 @@
-# Pol√≠tica de Privacidad de PagaMax
+# PolÌtica de Privacidad de Paga Menos
 
-PagaMax es una app informativa. No procesa pagos ni solicita acceso a cuentas bancarias o billeteras.
+Paga Menos es una app informativa. No procesa pagos ni solicita acceso a cuentas bancarias o billeteras.
 
-## Datos que usa la app
+## QuÈ datos usa la app
 
-- C√°mara: solo cuando la persona abre la pantalla de escaneo para leer un c√≥digo QR de comercio.
-- Datos locales: m√©todos de pago configurados por la persona, guardados en el dispositivo.
-- √çndice de promociones: snapshot local incluido en la app para calcular recomendaciones sin backend.
+- C·mara: solo para escanear cÛdigos QR de comercios cuando el usuario lo elige.
+- Datos promocionales: se descargan o se incluyen en la app para calcular recomendaciones.
+- Preferencias locales: medios de pago guardados, modo de optimizaciÛn y opciones de debug.
 
-## Qu√© no hacemos
+## QuÈ no hace la app
 
-- No creamos cuentas.
-- No enviamos anal√≠tica a terceros en esta beta.
-- No compartimos m√©todos de pago ni resultados con servidores propios.
-- No accedemos a ubicaci√≥n, contactos, SMS ni almacenamiento externo.
+- No inicia pagos por cuenta del usuario.
+- No accede a home banking.
+- No lee tarjetas, cuentas o saldos del dispositivo.
+- No comparte informaciÛn financiera con terceros desde la app beta.
 
-## C√°lculo de recomendaciones
+## Permisos
 
-Las recomendaciones se generan en el dispositivo usando reglas de promociones, topes, d√≠as v√°lidos y monto informado o le√≠do del QR. El ahorro mostrado es estimado.
+La beta puede solicitar permiso de c·mara para escanear QR. No requiere ubicaciÛn ni permisos en segundo plano para el flujo principal actual.
+
+## RetenciÛn y almacenamiento
+
+Las preferencias y algunos datos locales de prueba se guardan en el dispositivo para mejorar la experiencia de uso.
 
 ## Contacto
 
-Para consultas sobre esta beta, usar el repositorio oficial de PagaMax en GitHub.
+Para consultas sobre esta beta, usar el repositorio oficial de Pagamax en GitHub.

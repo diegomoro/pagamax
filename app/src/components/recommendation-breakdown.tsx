@@ -10,18 +10,20 @@ export function RecommendationBreakdown({
   pagamaxFeeArs,
   netSavingsArs,
   confidence,
+  hideFee = false,
 }: {
   grossSavingsArs: number;
   pagamaxFeeArs: number;
   netSavingsArs: number;
   confidence: ConfidenceInfo;
+  hideFee?: boolean;
 }) {
   return (
     <Card style={styles.card}>
       <View style={styles.grid}>
-        <Metric label="Gross savings" value={formatArs(grossSavingsArs)} />
-        <Metric label="Pagamax fee" value={formatArs(pagamaxFeeArs)} />
-        <Metric label="You keep" value={formatArs(netSavingsArs)} highlight />
+        <Metric label="Ahorro bruto" value={formatArs(grossSavingsArs)} />
+        {!hideFee ? <Metric label="Fee" value={formatArs(pagamaxFeeArs)} /> : null}
+        <Metric label="Te queda" value={formatArs(netSavingsArs)} highlight />
       </View>
       <ConfidenceBadge confidence={confidence} />
     </Card>

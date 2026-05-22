@@ -7,8 +7,20 @@ import { BottomSheet, Chip, EmptyState, IconButton, LoadingBlock, ScreenScroll, 
 import { usePagamax } from '@/context/pagamax-context';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
+function triggerHaptic(effect: Promise<void>): void {
+  void effect.catch(() => {
+    // Switch state should not wait on optional native feedback.
+  });
+}
+
 const BRAND_OPTIONS = ['Visa', 'Mastercard', 'Amex', 'Cabal'];
 const TYPE_OPTIONS: Array<NonNullable<StoredPaymentMethod['cardType']>> = ['credit', 'debit', 'prepaid', 'account_money'];
+const TYPE_LABELS: Record<NonNullable<StoredPaymentMethod['cardType']>, string> = {
+  credit: 'credito',
+  debit: 'debito',
+  prepaid: 'prepaga',
+  account_money: 'saldo',
+};
 
 const MethodRow = memo(function MethodRow({
   expanded,
@@ -33,7 +45,7 @@ const MethodRow = memo(function MethodRow({
         <ProviderIcon provider={method.provider} />
         <View style={styles.copy}>
           <Text style={styles.label}>{method.label}</Text>
-          <Text style={styles.meta}>{method.provider} · {method.rail}</Text>
+          <Text style={styles.meta}>{method.provider} - {method.rail}</Text>
         </View>
         <Switch value={method.enabled} onValueChange={onToggle} />
       </View>
@@ -62,7 +74,7 @@ const MethodRow = memo(function MethodRow({
             <Text style={styles.groupTitle}>Tipo</Text>
             <View style={styles.chips}>
               {TYPE_OPTIONS.map((option) => (
-                <Chip key={option} label={option} selected={method.cardType === option} onPress={() => onSelectType(option)} />
+                <Chip key={option} label={TYPE_LABELS[option]} selected={method.cardType === option} onPress={() => onSelectType(option)} />
               ))}
               <Chip label="Sin tipo" selected={!method.cardType} onPress={() => onSelectType(undefined)} />
             </View>
@@ -84,8 +96,8 @@ export default function MethodsScreen() {
 
   const activeCount = methods.filter((method) => method.enabled).length;
 
-  const handleToggle = async (id: string) => {
-    await Haptics.selectionAsync();
+  const handleToggle = (id: string) => {
+    triggerHaptic(Haptics.selectionAsync());
     toggleMethodEnabled(id);
   };
 

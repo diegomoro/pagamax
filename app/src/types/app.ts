@@ -38,6 +38,7 @@ export interface PendingScan {
 
 export interface RecommendationSession {
   amountArs: number;
+  amountEstimated: boolean;
   source: RecommendationSource;
   merchantInput: string;
   qrPayload?: string;
@@ -73,4 +74,24 @@ export interface MerchantOpportunity {
   providerHint?: string;
   distanceLabel?: string;
   tags: string[];
+}
+
+export interface PromoDataStatus {
+  source: 'bundled' | 'cached_remote' | 'remote_downloaded';
+  localVersion: string | null;
+  remoteVersion: string | null;
+  generatedAt: string | null;
+  manifestUrl: string | null;
+  lastCheckedAt: string | null;
+  lastError: string | null;
+  lastSyncStatus: 'idle' | 'checking' | 'updated' | 'up_to_date' | 'error' | 'unconfigured';
+}
+
+export interface DiagnosticsEvent {
+  id: string;
+  category: 'data' | 'scan' | 'match' | 'handoff' | 'session';
+  level: 'info' | 'warning' | 'error';
+  message: string;
+  detail?: string;
+  createdAt: string;
 }

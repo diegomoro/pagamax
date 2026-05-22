@@ -9,6 +9,69 @@ import type {
 const PAGAMAX_FEE_RATE = 0.16;
 const PAGAMAX_FEE_CAP_ARS = 2200;
 
+function translateCapPeriod(period: string): string {
+  if (period === 'daily') return 'diario';
+  if (period === 'weekly') return 'semanal';
+  if (period === 'monthly') return 'mensual';
+  if (period === 'per_transaction') return 'por transaccion';
+  return period;
+}
+
+function translateReason(reason: string): string {
+  let match = reason.match(/^(\d+)% cashback capped at (.+)$/);
+  if (match) return `${match[1]}% de reintegro con tope de ${match[2]}`;
+
+  match = reason.match(/^(\d+)% cashback$/);
+  if (match) return `${match[1]}% de reintegro`;
+
+  match = reason.match(/^(\d+)% coupon discount capped at (.+)$/);
+  if (match) return `${match[1]}% de descuento con cupon y tope de ${match[2]}`;
+
+  match = reason.match(/^(\d+)% coupon discount$/);
+  if (match) return `${match[1]}% de descuento con cupon`;
+
+  match = reason.match(/^(\d+)% discount capped at (.+)$/);
+  if (match) return `${match[1]}% de descuento con tope de ${match[2]}`;
+
+  match = reason.match(/^(\d+)% discount$/);
+  if (match) return `${match[1]}% de descuento`;
+
+  match = reason.match(/^Fixed (.+) benefit$/);
+  if (match) return `Beneficio fijo de ${match[1]}`;
+
+  match = reason.match(/^(\d+) installments estimated as financing value$/);
+  if (match) return `${match[1]} cuotas con valor estimado de financiacion`;
+
+  match = reason.match(/^Estimated savings (.+) on (.+)$/);
+  if (match) return `Ahorro estimado de ${match[1]} sobre ${match[2]}`;
+
+  match = reason.match(/^Use (.+)$/);
+  if (match) return `Usa ${match[1]}`;
+
+  return reason;
+}
+
+function translateWarning(warning: string): string {
+  const capMatch = warning.match(/^Assumes full (.+) cap is still available$/);
+  if (capMatch) {
+    return `Asume que el tope ${translateCapPeriod(capMatch[1])} sigue disponible`;
+  }
+
+  if (warning === 'Cashback timing is not modeled; gross value only') {
+    return 'No modela el tiempo de acreditacion del reintegro; muestra solo el valor bruto';
+  }
+
+  if (warning === 'Coupon application may still be required at checkout') {
+    return 'Puede requerir cupon o activacion adicional en el checkout';
+  }
+
+  if (warning === 'Installment value is an estimate, not a guaranteed cash discount') {
+    return 'El valor de cuotas es una estimacion, no un descuento garantizado en efectivo';
+  }
+
+  return warning;
+}
+
 export function estimatePagamaxFeeArs(grossSavingsArs: number): number {
   if (grossSavingsArs <= 0) return 0;
   return Math.round(Math.min(grossSavingsArs * PAGAMAX_FEE_RATE, PAGAMAX_FEE_CAP_ARS));
@@ -65,8 +128,8 @@ export function buildRecommendationPresentation(
   const netSavingsArs = Math.max(0, grossSavingsArs - pagamaxFeeArs);
   const confidence = buildConfidence(session.match.match_method, recommendation.warnings.length);
 
-  const qualifiers = recommendation.reasons.slice(0, 3);
-  const caveats = recommendation.warnings;
+  const qualifiers = recommendation.reasons.slice(0, 3).map(translateReason);
+  const caveats = recommendation.warnings.map(translateWarning);
 
   return {
     grossSavingsArs,

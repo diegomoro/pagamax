@@ -3,10 +3,18 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BrandLockup } from '@/components/brand-lockup';
 import { IconButton, PrimaryButton, SecondaryButton } from '@/components/ui';
 import { ScanOverlay } from '@/components/scan-overlay';
 import { usePagamax } from '@/context/pagamax-context';
 import { colors, radius, spacing, typography } from '@/lib/theme';
+
+function triggerHaptic(effect: Promise<void>): void {
+  void effect.catch(() => {
+    // QR handling should not depend on native haptic feedback completing.
+  });
+}
 
 export default function ScanScreen() {
   const { prepareScan, runPendingScanRecommendation, settings } = usePagamax();
@@ -15,23 +23,20 @@ export default function ScanScreen() {
   const [pasteValue, setPasteValue] = useState('');
   const [showPaste, setShowPaste] = useState(false);
   const [feedback, setFeedback] = useState<'success' | 'error' | null>(null);
+  const insets = useSafeAreaInsets();
 
   const continueWithPayload = async (payload: string) => {
     try {
       const match = prepareScan(payload);
       setLocked(true);
       setFeedback('success');
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      if (match.qr.amount_ars !== null) {
-        runPendingScanRecommendation(match.qr.amount_ars);
-        router.replace('/results');
-        return;
-      }
-      router.replace('/manual');
+      triggerHaptic(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
+      runPendingScanRecommendation(match.qr.amount_ars ?? undefined);
+      router.replace('/results');
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo interpretar el QR.';
       setFeedback('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      triggerHaptic(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
       setTimeout(() => setFeedback(null), 450);
       Alert.alert('QR invalido', message);
       setLocked(false);
@@ -71,13 +76,17 @@ export default function ScanScreen() {
 
       {feedback ? <View style={[styles.flash, feedback === 'success' ? styles.flashSuccess : styles.flashError]} /> : null}
 
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { top: insets.top + spacing.sm }]}>
         <IconButton icon="arrow-back" tone="light" onPress={() => router.back()} />
       </View>
 
+      <View style={[styles.brandWrap, { top: insets.top + spacing.sm }]}>
+        <BrandLockup compact showTagline={false} />
+      </View>
+
       <View style={styles.bottomCard}>
-        <Pressable onPress={() => router.replace('/manual')}>
-          <Text style={styles.bottomLink}>Sin QR? Busca el comercio</Text>
+        <Pressable hitSlop={12} onPress={() => router.replace('/manual')}>
+          <Text style={styles.bottomLink}>No ves el QR? Busca el comercio</Text>
         </Pressable>
 
         {settings.debugEnabled ? (
@@ -116,6 +125,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 56,
     left: spacing.md,
+    zIndex: 20,
+    elevation: 20,
+  },
+  brandWrap: {
+    position: 'absolute',
+    top: 56,
+    left: 72,
+    right: spacing.md,
+    zIndex: 20,
+    elevation: 20,
   },
   bottomCard: {
     position: 'absolute',
@@ -128,6 +147,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
+    zIndex: 20,
+    elevation: 20,
   },
   bottomLink: {
     ...typography.headingSm,

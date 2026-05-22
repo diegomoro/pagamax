@@ -13,6 +13,15 @@ export async function openPaymentApp(provider: string): Promise<'deep_link' | 's
     }
   }
 
+  if (config.androidPackage) {
+    try {
+      await Linking.openURL(`intent://#Intent;package=${config.androidPackage};end`);
+      return 'deep_link';
+    } catch {
+      // Fall through to Play Store.
+    }
+  }
+
   await Linking.openURL(config.playStoreUrl);
   return 'store';
 }

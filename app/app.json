@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "PagaMax",
-    "slug": "pagamax-android",
+    "name": "Paga Menos",
+    "slug": "paga-menos",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "pagamax",
+    "scheme": "pagamenos",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -20,7 +20,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.pagamax.app",
+      "package": "com.pagamenos.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -36,12 +36,19 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "PagaMax usa la cámara para escanear códigos QR de comercios."
+          "cameraPermission": "Paga Menos usa la camara para escanear codigos QR de comercios."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3ecd4a17-ce58-4809-8a36-dfd5269b0853"
+      }
     }
   }
 }

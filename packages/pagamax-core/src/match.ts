@@ -1,4 +1,4 @@
-import { parseQr, type ParsedQr } from './parse-emv.js';
+import { parseQr, type ParsedQr } from './parse-emv';
 import type {
   IssuerGroup,
   MatchMethod,
@@ -7,7 +7,7 @@ import type {
   PromoIndex,
   PromoMatch,
   PromoSummary,
-} from './types.js';
+} from './types';
 
 const AGGREGATOR_CUITS = new Set([
   '30578176470',
@@ -24,6 +24,16 @@ const DAYS: Record<string, number> = {
   domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6,
 };
 
+const MCC_CATEGORY_OVERRIDES: Record<string, string> = {
+  // Utilities, taxes and public services are common QR payment contexts but are
+  // not covered by the retail-focused category index.
+  '4900': 'Servicios',
+  '9311': 'Servicios',
+  '9399': 'Servicios',
+};
+
+const SERVICE_NAME_PATTERN = /\b(epec|edenor|edesur|edemsa|edesa|aysa|metrogas|ecogas|camuzzi|litoral\s*gas|gasnor|energia|electric|luz|agua|impuesto|municipalidad|rentas|servicio)\b/i;
+
 interface MatchSeed {
   cuit: string | null;
   merchantName: string | null;
@@ -39,6 +49,16 @@ function normalizeName(name: string): string {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '')
     .replace(/^(el|la|los|las|lo)/, '');
+}
+
+function inferCategoryFromMcc(mcc: string | null, promoIndex: PromoIndex): string | null {
+  if (!mcc) return null;
+  return promoIndex.mcc_to_category[mcc] ?? MCC_CATEGORY_OVERRIDES[mcc] ?? null;
+}
+
+function inferCategoryFromName(name: string | null): string | null {
+  if (!name) return null;
+  return SERVICE_NAME_PATTERN.test(name) ? 'Servicios' : null;
 }
 
 function dayOfWeek(dateStr: string): string {
@@ -112,9 +132,8 @@ function inferResolvedCategory(
   merchantPromos: PromoMatch[],
   promoIndex: PromoIndex,
 ): string | null {
-  if (mcc && promoIndex.mcc_to_category[mcc]) {
-    return promoIndex.mcc_to_category[mcc]!;
-  }
+  const mccCategory = inferCategoryFromMcc(mcc, promoIndex);
+  if (mccCategory) return mccCategory;
 
   const counts = new Map<string, number>();
   for (const promo of merchantPromos) {
@@ -211,7 +230,7 @@ function buildMatchFromSeed(seed: MatchSeed, promoIndex: PromoIndex, opts: Match
   }
 
   if (promoIndices.length === 0 && seed.mcc) {
-    const category = promoIndex.mcc_to_category[seed.mcc];
+    const category = inferCategoryFromMcc(seed.mcc, promoIndex);
     if (category && promoIndex.by_category[category]) {
       promoIndices = promoIndex.by_category[category]!;
       resolvedName = seed.merchantName ?? `(${category})`;
@@ -232,12 +251,16 @@ function buildMatchFromSeed(seed: MatchSeed, promoIndex: PromoIndex, opts: Match
     relevance_score: 0,
   }));
 
-  const resolvedCategory = inferResolvedCategory(seed.mcc, promos, promoIndex);
+  const resolvedCategory = inferResolvedCategory(seed.mcc, promos, promoIndex) ?? inferCategoryFromName(seed.merchantName ?? resolvedName);
   if (resolvedCategory) {
     const before = generalPromos.length;
     generalPromos = generalPromos.filter(p => p.category === resolvedCategory);
     const removed = before - generalPromos.length;
     if (removed > 0) filtersApplied.push(`general_category(${resolvedCategory}, -${removed})`);
+  } else if (matchMethod !== 'none') {
+    const removed = generalPromos.length;
+    generalPromos = [];
+    if (removed > 0) filtersApplied.push(`general_suppressed(no_category, -${removed})`);
   }
 
   function applyFilters(list: PromoMatch[]): PromoMatch[] {

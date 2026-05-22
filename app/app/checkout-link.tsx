@@ -20,7 +20,7 @@ export default function CheckoutLinkScreen() {
 
   const submit = () => {
     if (!amountArs) {
-      Alert.alert('Monto invalido', 'Ingresa un monto positivo para comparar el checkout.');
+      Alert.alert('Monto invalido', 'Ingresa un monto positivo para comparar el link de pago.');
       return;
     }
 
@@ -28,7 +28,7 @@ export default function CheckoutLinkScreen() {
       runCheckoutRecommendation(urlInput.trim(), amountArs, merchantOverride.trim() || undefined);
       router.replace('/results');
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'No se pudo interpretar el checkout.';
+      const message = caught instanceof Error ? caught.message : 'No se pudo interpretar el link de pago.';
       Alert.alert('Error', message);
     }
   };
@@ -40,10 +40,10 @@ export default function CheckoutLinkScreen() {
           <IconButton icon="arrow-back" onPress={() => router.back()} />
         </View>
 
-        <PageTitle title="Paste checkout link" subtitle="Usa esta ruta para e-commerce o links de pago donde quieras comparar antes de pagar." />
+        <PageTitle title="Pegar link de pago" subtitle="Usa esta ruta para compras online donde quieras comparar antes de pagar." />
 
         <View style={styles.card}>
-          <Text style={styles.label}>Checkout URL</Text>
+          <Text style={styles.label}>URL del link de pago</Text>
           <TextInput
             style={styles.input}
             value={urlInput}
@@ -54,7 +54,7 @@ export default function CheckoutLinkScreen() {
             placeholderTextColor={colors.inkMuted}
           />
 
-          <Text style={styles.label}>Merchant</Text>
+          <Text style={styles.label}>Comercio</Text>
           <TextInput
             style={styles.input}
             value={merchantOverride}
@@ -63,7 +63,7 @@ export default function CheckoutLinkScreen() {
             placeholderTextColor={colors.inkMuted}
           />
 
-          <Text style={styles.label}>Amount</Text>
+          <Text style={styles.label}>Monto</Text>
           <TextInput
             style={styles.input}
             value={amountInput}
@@ -73,13 +73,13 @@ export default function CheckoutLinkScreen() {
             placeholderTextColor={colors.inkMuted}
           />
 
-          {detectedMerchant ? <Text style={styles.detected}>Merchant detectado: {detectedMerchant}</Text> : null}
+          {detectedMerchant ? <Text style={styles.detected}>Comercio detectado: {detectedMerchant}</Text> : null}
         </View>
       </ScreenScroll>
 
       <StickyButton
-        label="Compare checkout"
-        preview={canSubmit ? `Buscar mejor ruta para ${effectiveMerchant}` : 'Pega un checkout link, comercio y monto'}
+        label="Ver mejor ruta"
+        preview={canSubmit ? `Buscar mejor ruta para ${effectiveMerchant}` : 'Pega un link de pago, comercio y monto'}
         disabled={!canSubmit}
         onPress={submit}
       />

@@ -1,5 +1,7 @@
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CompactRecommendationRow, HeroRecommendationCard } from '@/components/recommendation-card';
 import { EmptyState, InlineNotice, LoadingBlock } from '@/components/ui';
 import { usePagamax } from '@/context/pagamax-context';
@@ -17,7 +19,9 @@ function formatDateLabel(raw: string | null): string {
 }
 
 export default function ResultsScreen() {
-  const { currentSession, dataTimestamp, loading, settings } = usePagamax();
+  const { currentSession, dataTimestamp, loading, recordHandoff, settings } = usePagamax();
+  const [showAlternatives, setShowAlternatives] = useState(false);
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return <LoadingBlock label="Preparando recomendaciones..." />;
@@ -34,16 +38,19 @@ export default function ResultsScreen() {
   const ranked = sortRecommendationsForMode(currentSession, settings.optimizationMode).slice(0, 5);
   const [hero, ...rest] = ranked;
   const heroPresentation = hero ? buildRecommendationPresentation(currentSession, hero) : null;
+  const alternativeCount = rest.length;
 
   const handleOpen = async (provider: string) => {
     try {
       const mode = await openPaymentApp(provider);
+      recordHandoff(provider, mode);
       if (mode === 'store') {
         const config = getPaymentAppConfig(provider);
         Alert.alert('Se abrio Google Play', `No hay deep link verificado para ${config.label}.`);
       }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo abrir la app seleccionada.';
+      recordHandoff(provider, 'error', message);
       Alert.alert('No se pudo abrir la app', message);
     }
   };
@@ -51,13 +58,31 @@ export default function ResultsScreen() {
   return (
     <View style={styles.screen}>
       <FlatList
-        data={rest}
         keyExtractor={(item) => `${item.method.id}-${item.promo.promo_key}`}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
         ListHeaderComponent={
           <View style={styles.headerWrap}>
+            <Text style={styles.kicker}>La mejor forma de pagar ahora</Text>
             <Text style={styles.merchant}>{currentSession.match.merchant_name}</Text>
-            <Text style={styles.amount}>{formatArs(currentSession.amountArs)} · {currentSession.source === 'scan' ? 'QR' : currentSession.source === 'online' ? 'checkout link' : 'manual'}</Text>
+            <Text style={styles.amount}>
+              {currentSession.amountEstimated ? 'QR sin monto - ranking estimado' : `${formatArs(currentSession.amountArs)} - ${currentSession.source === 'scan' ? 'QR' : currentSession.source === 'online' ? 'link de pago' : 'manual'}`}
+            </Text>
+
+            {currentSession.amountEstimated ? (
+              <Pressable
+                style={styles.estimatedNotice}
+                onPress={() => router.push({
+                  pathname: '/manual',
+                  params: {
+                    merchant: currentSession.match.merchant_name,
+                    amount: String(currentSession.amountArs),
+                  },
+                })}
+              >
+                <Text style={styles.estimatedTitle}>No habia monto en el QR</Text>
+                <Text style={styles.estimatedBody}>Te muestro la mejor ruta con $45.000 de referencia. Toca aca si quieres ajustar el total.</Text>
+              </Pressable>
+            ) : null}
 
             {hero && heroPresentation ? (
               <HeroRecommendationCard
@@ -68,14 +93,15 @@ export default function ResultsScreen() {
                 netSavingsArs={heroPresentation.netSavingsArs}
                 qualifiers={heroPresentation.qualifiers}
                 dataDateLabel={formatDateLabel(dataTimestamp)}
-                handoffLabel={getPaymentAppConfig(hero.method.provider).verifiedDeepLink ? `Abrir ${getPaymentAppConfig(hero.method.provider).label}` : `Buscar ${getPaymentAppConfig(hero.method.provider).label}`}
+                primaryLabel={getPaymentAppConfig(hero.method.provider).verifiedDeepLink || getPaymentAppConfig(hero.method.provider).androidPackage ? `Abrir ${getPaymentAppConfig(hero.method.provider).label}` : `Buscar ${getPaymentAppConfig(hero.method.provider).label}`}
                 onPressDetails={() => router.push({ pathname: '/detail', params: { index: '0' } })}
-                onPressHandoff={() => void handleOpen(hero.method.provider)}
-                onPressPrimary={() => router.push({ pathname: '/success', params: { index: '0' } })}
+                onPressPrimary={() => void handleOpen(hero.method.provider)}
               />
             ) : (
               <EmptyState title="No encontramos opciones elegibles" body="Prueba con otro monto, activa mas medios o corrige el comercio." />
             )}
+
+            <Text style={styles.helper}>Abre tu mejor ruta o revisa el detalle.</Text>
 
             {settings.debugEnabled ? (
               <InlineNotice
@@ -83,8 +109,19 @@ export default function ResultsScreen() {
                 body={`match=${currentSession.match.match_method} | qr_amount=${currentSession.match.qr.amount_ars ?? 'null'} | filtros=${currentSession.match.filters_applied.join(', ') || 'ninguno'}`}
               />
             ) : null}
+
+            {alternativeCount > 0 ? (
+              <Pressable onPress={() => setShowAlternatives((prev) => !prev)} style={styles.alternativesToggle}>
+                <View style={styles.alternativesCopy}>
+                  <Text style={styles.alternativesTitle}>Otras opciones ({alternativeCount})</Text>
+                  <Text style={styles.alternativesBody}>Solo si quieres comparar.</Text>
+                </View>
+                <Text style={styles.alternativesAction}>{showAlternatives ? 'Ocultar' : 'Ver'}</Text>
+              </Pressable>
+            ) : null}
           </View>
         }
+        data={showAlternatives ? rest : []}
         renderItem={({ item, index }) => {
           const presentation = buildRecommendationPresentation(currentSession, item);
           return (
@@ -103,8 +140,8 @@ export default function ResultsScreen() {
             <Pressable onPress={() => router.replace('/scan')}>
               <Text style={styles.footerLink}>Escanear otro QR</Text>
             </Pressable>
-            <Pressable onPress={() => router.replace('/manual')}>
-              <Text style={styles.footerLink}>Nueva busqueda</Text>
+            <Pressable onPress={() => router.push({ pathname: '/success', params: { index: '0' } })}>
+              <Text style={styles.footerLink}>Marcar ahorro</Text>
             </Pressable>
           </View>
         }
@@ -127,6 +164,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.sm,
   },
+  kicker: {
+    ...typography.overline,
+    color: colors.teal,
+  },
   merchant: {
     ...typography.headingLg,
     color: colors.ink,
@@ -135,10 +176,61 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.inkMuted,
   },
+  estimatedNotice: {
+    borderRadius: spacing.md,
+    backgroundColor: colors.tealSoft,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xxs,
+  },
+  estimatedTitle: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  estimatedBody: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  helper: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  alternativesToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.md,
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  alternativesCopy: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  alternativesTitle: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  alternativesBody: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  alternativesAction: {
+    ...typography.headingSm,
+    color: colors.accentPressed,
+  },
   footerLinks: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingVertical: spacing.lg,
+    gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   footerLink: {
     ...typography.headingSm,
@@ -150,3 +242,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 });
+

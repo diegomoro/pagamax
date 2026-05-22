@@ -1,32 +1,75 @@
 import { useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ConfidenceBadge } from '@/components/confidence-badge';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CompactRecommendationRow } from '@/components/recommendation-card';
 import { RecommendationBreakdown } from '@/components/recommendation-breakdown';
 import { RuleGrid } from '@/components/rule-grid';
-import { Chip, EmptyState, IconButton, Pill, SecondaryButton } from '@/components/ui';
+import { EmptyState, IconButton, Pill, SecondaryButton } from '@/components/ui';
 import { usePagamax } from '@/context/pagamax-context';
 import { getPaymentAppConfig } from '@/config/payment-apps';
 import { openPaymentApp } from '@/lib/handoff';
 import { buildRecommendationPresentation, sortRecommendationsForMode } from '@/lib/experience';
 import { colors, radius, shadows, spacing, typography } from '@/lib/theme';
 
+const DAY_LABELS: Record<string, string> = {
+  monday: 'lunes',
+  tuesday: 'martes',
+  wednesday: 'miercoles',
+  thursday: 'jueves',
+  friday: 'viernes',
+  saturday: 'sabado',
+  sunday: 'domingo',
+};
+
+function formatRuleDate(raw: string | null | undefined, fallback: string) {
+  if (!raw) return fallback;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+}
+
+function formatDayPattern(raw: string | null | undefined) {
+  if (!raw) return 'Sin detalle';
+  return raw
+    .split(/[;,]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => DAY_LABELS[part.toLowerCase()] ?? part)
+    .join(', ');
+}
+
+function formatChannel(raw: string | null | undefined) {
+  if (!raw) return 'Sin detalle';
+  const normalized = raw.toLowerCase();
+  if (normalized === 'in_store') return 'Tienda';
+  if (normalized === 'online') return 'Online';
+  if (normalized === 'qr') return 'QR';
+  if (normalized === 'mixed' || normalized === 'hybrid') return 'Mixto';
+  if (normalized === 'all') return 'Todos';
+  return raw;
+}
+
 export default function DetailScreen() {
-  const { currentSession, settings, updateSettings } = usePagamax();
+  const { currentSession, recordHandoff, settings } = usePagamax();
   const params = useLocalSearchParams<{ index?: string }>();
   const [reasonsOpen, setReasonsOpen] = useState(true);
   const scrollY = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+  const selectedIndex = Number(params.index ?? '0');
 
   const ranked = useMemo(() => (
     currentSession ? sortRecommendationsForMode(currentSession, settings.optimizationMode) : []
   ), [currentSession, settings.optimizationMode]);
 
   const recommendation = useMemo(() => {
-    const index = Number(params.index ?? '0');
-    if (!currentSession || !Number.isFinite(index)) return null;
-    return ranked[index] ?? null;
-  }, [currentSession, params.index, ranked]);
+    if (!currentSession || !Number.isFinite(selectedIndex)) return null;
+    return ranked[selectedIndex] ?? null;
+  }, [currentSession, ranked, selectedIndex]);
+  const alternativeRecommendations = useMemo(
+    () => ranked.filter((_, index) => index !== selectedIndex).slice(0, 3),
+    [ranked, selectedIndex],
+  );
 
   if (!currentSession || !recommendation) {
     return (
@@ -38,87 +81,81 @@ export default function DetailScreen() {
 
   const config = getPaymentAppConfig(recommendation.method.provider);
   const presentation = buildRecommendationPresentation(currentSession, recommendation);
-  const compactHeight = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [88, 68],
-    extrapolate: 'clamp',
-  });
+  const handleOpen = async () => {
+    try {
+      const mode = await openPaymentApp(recommendation.method.provider);
+      recordHandoff(recommendation.method.provider, mode);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'No se pudo abrir la app seleccionada.';
+      recordHandoff(recommendation.method.provider, 'error', message);
+    }
+  };
 
   return (
     <View style={styles.screen}>
-      <Animated.View style={[styles.topBar, { height: compactHeight }]}>
+      <Animated.View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.topBarInner}>
           <IconButton icon="arrow-back" onPress={() => router.back()} />
           <View style={styles.topCopy}>
             <Text numberOfLines={1} style={styles.topTitle}>{recommendation.method.label}</Text>
             <Text numberOfLines={1} style={styles.topSub}>Abrir {config.label}</Text>
           </View>
-          <SecondaryButton stretch={false} onPress={() => void openPaymentApp(recommendation.method.provider)}>
-            {config.verifiedDeepLink ? 'Abrir' : 'Buscar'}
+          <SecondaryButton stretch={false} onPress={() => void handleOpen()}>
+            {config.verifiedDeepLink || config.androidPackage ? 'Abrir' : 'Buscar'}
           </SecondaryButton>
         </View>
       </Animated.View>
 
       <Animated.ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 112 }]}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <Text style={styles.merchant}>{currentSession.match.merchant_name}</Text>
-          <Text style={styles.total}>Total analizado {currentSession.amountArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
+          <Text style={styles.total}>
+            {currentSession.amountEstimated ? 'Monto de referencia: ' : 'Total analizado '}
+            {currentSession.amountArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}
+          </Text>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.value}>{presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
-          <Text style={styles.caption}>You keep estimado</Text>
+          <Text style={styles.value}>{recommendation.valueType === 'fallback' ? 'Sin promo confirmada' : presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
+          <Text style={styles.caption}>{recommendation.valueType === 'fallback' ? 'Ruta disponible para pagar y revisar beneficios en la billetera' : 'Te queda despues del fee'}</Text>
           <Text style={styles.net}>Ruta sugerida: {recommendation.method.label}</Text>
           <View style={styles.pills}>
-            <Pill label={recommendation.valueType === 'cashback' ? 'Reintegro' : recommendation.valueType === 'financing_estimate' ? 'Cuotas' : 'Descuento'} tone="accent" />
-            <Pill label={recommendation.source === 'merchant' ? 'Regla del comercio' : 'Regla general'} />
+            <Pill label={recommendation.valueType === 'cashback' ? 'Reintegro' : recommendation.valueType === 'financing_estimate' ? 'Cuotas' : recommendation.valueType === 'fallback' ? 'Ruta disponible' : 'Descuento'} tone="accent" />
+            <Pill label={recommendation.source === 'merchant' ? 'Regla del comercio' : recommendation.source === 'fallback' ? 'Sin promo confirmada' : 'Regla general'} />
           </View>
         </View>
 
-        <RecommendationBreakdown
-          grossSavingsArs={presentation.grossSavingsArs}
-          pagamaxFeeArs={presentation.pagamaxFeeArs}
-          netSavingsArs={presentation.netSavingsArs}
-          confidence={presentation.confidence}
-        />
-
-        <View style={styles.preferenceRow}>
-          <Text style={styles.preferenceLabel}>Optimize for</Text>
-          <View style={styles.preferenceChips}>
-            <Chip
-              label="Max savings"
-              selected={settings.optimizationMode === 'max_savings'}
-              onPress={() => updateSettings({ optimizationMode: 'max_savings' })}
-            />
-            <Chip
-              label="Fastest checkout"
-              selected={settings.optimizationMode === 'fastest_checkout'}
-              onPress={() => updateSettings({ optimizationMode: 'fastest_checkout' })}
-            />
-          </View>
-        </View>
-
-        <ConfidenceBadge confidence={presentation.confidence} />
+        {recommendation.valueType === 'fallback' ? null : (
+          <RecommendationBreakdown
+            grossSavingsArs={presentation.grossSavingsArs}
+            pagamaxFeeArs={presentation.pagamaxFeeArs}
+            netSavingsArs={presentation.netSavingsArs}
+            confidence={presentation.confidence}
+          />
+        )}
+        <Text style={styles.orderNote}>
+          Ranking actual: {settings.optimizationMode === 'max_savings' ? 'maximo ahorro neto' : 'pago mas rapido'}
+        </Text>
 
         <RuleGrid
           items={[
-            { icon: 'calendar-outline', label: 'Days', value: recommendation.promo.day_pattern || 'Sin detalle' },
-            { icon: 'hourglass-outline', label: 'Validity', value: `${recommendation.promo.valid_from || 'sin inicio'} a ${recommendation.promo.valid_to || 'sin fin'}` },
-            { icon: 'storefront-outline', label: 'Channel', value: recommendation.promo.channel || 'Sin detalle' },
-            { icon: 'card-outline', label: 'Issuer', value: recommendation.promo.issuer },
-            { icon: 'cash-outline', label: 'Cap', value: recommendation.promo.cap_amount_ars ? recommendation.promo.cap_amount_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin tope' },
-            { icon: 'pricetag-outline', label: 'Minimum', value: recommendation.promo.min_purchase_ars ? recommendation.promo.min_purchase_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin minimo' },
+            { icon: 'calendar-outline', label: 'Dias', value: formatDayPattern(recommendation.promo.day_pattern) },
+            { icon: 'hourglass-outline', label: 'Vigencia', value: `${formatRuleDate(recommendation.promo.valid_from, 'sin inicio')} al ${formatRuleDate(recommendation.promo.valid_to, 'sin fin')}` },
+            { icon: 'storefront-outline', label: 'Canal', value: formatChannel(recommendation.promo.channel) },
+            { icon: 'card-outline', label: 'Emisor', value: recommendation.promo.issuer },
+            { icon: 'cash-outline', label: 'Tope', value: recommendation.promo.cap_amount_ars ? recommendation.promo.cap_amount_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin tope' },
+            { icon: 'pricetag-outline', label: 'Minimo', value: recommendation.promo.min_purchase_ars ? recommendation.promo.min_purchase_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin minimo' },
           ]}
         />
 
         <View style={styles.section}>
           <Pressable onPress={() => setReasonsOpen((prev) => !prev)} style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Why this route wins</Text>
+            <Text style={styles.sectionTitle}>Por que funciona</Text>
             <Text style={styles.sectionToggle}>{reasonsOpen ? '-' : '+'}</Text>
           </Pressable>
           {reasonsOpen ? presentation.qualifiers.map((reason) => (
@@ -131,7 +168,7 @@ export default function DetailScreen() {
 
         {presentation.caveats.length > 0 ? (
           <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>Eligibility and caveats</Text>
+            <Text style={styles.warningTitle}>Condiciones y caveats</Text>
             {presentation.caveats.map((warning) => (
               <Text key={warning} style={styles.warningText}>{warning}</Text>
             ))}
@@ -139,9 +176,10 @@ export default function DetailScreen() {
         ) : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Alternative routes</Text>
-          {ranked.slice(0, 3).map((item, index) => {
+          <Text style={styles.sectionTitle}>Otras opciones</Text>
+          {alternativeRecommendations.map((item) => {
             const breakdown = buildRecommendationPresentation(currentSession, item);
+            const index = ranked.findIndex((candidate) => candidate === item);
             return (
               <CompactRecommendationRow
                 key={`${item.method.id}-${item.promo.promo_key}`}
@@ -155,7 +193,7 @@ export default function DetailScreen() {
         </View>
 
         <SecondaryButton onPress={() => router.push({ pathname: '/success', params: { index: params.index ?? '0' } })}>
-          Proceed with this route
+          Marcar ahorro
         </SecondaryButton>
       </Animated.ScrollView>
     </View>
@@ -246,17 +284,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginTop: spacing.sm,
   },
-  preferenceRow: {
-    gap: spacing.xs,
-  },
-  preferenceLabel: {
+  orderNote: {
     ...typography.caption,
     color: colors.inkMuted,
-  },
-  preferenceChips: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    flexWrap: 'wrap',
   },
   section: {
     backgroundColor: colors.surface,

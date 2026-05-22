@@ -12,6 +12,7 @@ import type { ConfidenceInfo } from '@/types/app';
 function valueTypeLabel(valueType: PaymentRecommendation['valueType']): string {
   if (valueType === 'cashback') return 'Reintegro';
   if (valueType === 'financing_estimate') return 'Cuotas';
+  if (valueType === 'fallback') return 'Ruta disponible';
   return 'Descuento';
 }
 
@@ -50,9 +51,8 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
   netSavingsArs,
   qualifiers,
   dataDateLabel,
-  handoffLabel,
+  primaryLabel,
   onPressDetails,
-  onPressHandoff,
   onPressPrimary,
   delay = 0,
 }: {
@@ -63,15 +63,15 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
   netSavingsArs: number;
   qualifiers: string[];
   dataDateLabel: string;
-  handoffLabel: string;
+  primaryLabel: string;
   onPressDetails: () => void;
-  onPressHandoff: () => void;
   onPressPrimary: () => void;
   delay?: number;
 }) {
   const animatedStyle = useEntrance(delay);
   const counter = useRef(new Animated.Value(0)).current;
   const [displayValue, setDisplayValue] = useState(0);
+  const isFallback = recommendation.valueType === 'fallback';
 
   useEffect(() => {
     const listener = counter.addListener(({ value }) => setDisplayValue(value));
@@ -98,30 +98,34 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
       </View>
 
       <View style={styles.heroValueWrap}>
-        <Text style={styles.heroValue}>{formatArs(displayValue)}</Text>
-        <Text style={styles.heroCaption}>You keep estimado</Text>
+        <Text style={styles.heroValue}>{isFallback ? 'Sin promo confirmada' : formatArs(displayValue)}</Text>
+        <Text style={styles.heroCaption}>{isFallback ? 'Usa esta ruta y revisa beneficios antes de confirmar' : 'Te queda despues del fee'}</Text>
       </View>
 
-      <RecommendationBreakdown
-        grossSavingsArs={grossSavingsArs}
-        pagamaxFeeArs={pagamaxFeeArs}
-        netSavingsArs={netSavingsArs}
-        confidence={confidence}
-      />
+      {isFallback ? null : (
+        <RecommendationBreakdown
+          grossSavingsArs={grossSavingsArs}
+          pagamaxFeeArs={pagamaxFeeArs}
+          netSavingsArs={netSavingsArs}
+          confidence={confidence}
+          hideFee
+        />
+      )}
 
       <View style={styles.qualifiers}>
-        {qualifiers.slice(0, 3).map((qualifier) => (
+        {qualifiers.slice(0, 2).map((qualifier) => (
           <Text key={qualifier} style={styles.qualifier}>+ {qualifier}</Text>
         ))}
       </View>
 
-      <Text style={styles.heroTrust}>Reglas y ahorro estimado vigentes al {dataDateLabel}</Text>
+      <Text style={styles.heroTrust}>
+        {isFallback ? `No hay ahorro confirmado en datos vigentes al ${dataDateLabel}` : `Ahorro estimado con reglas vigentes al ${dataDateLabel}`}
+      </Text>
 
       <View style={styles.heroActions}>
-        <PrimaryButton onPress={onPressPrimary}>Proceed with this route</PrimaryButton>
+        <PrimaryButton onPress={onPressPrimary}>{primaryLabel}</PrimaryButton>
         <View style={styles.heroSecondary}>
-          <SecondaryButton onPress={onPressDetails}>Ver detalle</SecondaryButton>
-          <SecondaryButton onPress={onPressHandoff}>{handoffLabel}</SecondaryButton>
+          <SecondaryButton onPress={onPressDetails}>Por que funciona</SecondaryButton>
         </View>
       </View>
     </Animated.View>
@@ -154,8 +158,8 @@ export const CompactRecommendationRow = memo(function CompactRecommendationRow({
           <Text numberOfLines={1} style={styles.rowPromo}>{recommendation.promo.promo_title}</Text>
         </View>
         <View style={styles.rowRight}>
-          <Text style={styles.rowValue}>{formatArs(netSavingsArs)}</Text>
-          <Text style={styles.rowHint}>you keep</Text>
+          <Text style={styles.rowValue}>{recommendation.valueType === 'fallback' ? 'Abrir' : formatArs(netSavingsArs)}</Text>
+          <Text style={styles.rowHint}>{recommendation.valueType === 'fallback' ? 'ruta' : 'neto'}</Text>
         </View>
       </Pressable>
     </Animated.View>

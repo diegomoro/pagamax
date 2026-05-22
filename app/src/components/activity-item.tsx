@@ -22,13 +22,13 @@ export function ActivityItem({
       <View style={styles.header}>
         <View style={styles.copy}>
           <Text style={styles.merchant}>{item.merchantName}</Text>
-          <Text style={styles.meta}>{formatDate(item.createdAt)} · {item.category} · {item.methodLabel}</Text>
+          <Text style={styles.meta}>{formatDate(item.createdAt)} - {item.category} - {item.methodLabel}</Text>
         </View>
         <Text style={styles.netValue}>{formatArs(item.netSavingsArs)}</Text>
       </View>
       <View style={styles.breakdown}>
-        <Text style={styles.breakdownText}>Gross savings {formatArs(item.grossSavingsArs)}</Text>
-        <Text style={styles.breakdownText}>Pagamax fee {formatArs(item.pagamaxFeeArs)}</Text>
+        <Text style={styles.breakdownText}>Ahorro bruto {formatArs(item.grossSavingsArs)}</Text>
+        <Text style={styles.breakdownText}>Fee Paga Menos {formatArs(item.pagamaxFeeArs)}</Text>
       </View>
       <ConfidenceBadge confidence={item.confidence} />
     </Pressable>

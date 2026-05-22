@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { DEMO_ACTIVITY } from '@/lib/demo-data';
-import { summarizeActivity } from '@/lib/experience';
+import { buildRecommendationPresentation, summarizeActivity } from '@/lib/experience';
 import { CtaBar } from '@/components/cta-bar';
 import { RecommendationBreakdown } from '@/components/recommendation-breakdown';
 import { ScreenScroll, SecondaryButton } from '@/components/ui';
@@ -39,24 +39,22 @@ export default function SuccessScreen() {
   const recommendation = currentSession.recommendations[Number(params.index ?? '0')];
   const history = activity.length > 0 ? activity : DEMO_ACTIVITY;
   const summary = summarizeActivity(history);
-  const grossSavingsArs = Math.round(recommendation.estimatedSavingsArs);
-  const pagamaxFeeArs = Math.round(grossSavingsArs * 0.16);
-  const netSavingsArs = Math.max(0, grossSavingsArs - pagamaxFeeArs);
   const alreadySaved = settings.savedMerchants.includes(currentSession.match.merchant_name);
+  const presentation = buildRecommendationPresentation(currentSession, recommendation);
 
   return (
     <View style={styles.screen}>
       <ScreenScroll contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Text style={styles.kicker}>Payment optimized</Text>
-          <Text style={styles.title}>Pagamax encontro una ruta clara para {currentSession.match.merchant_name}</Text>
+          <Text style={styles.kicker}>Pago optimizado</Text>
+          <Text style={styles.title}>Paga Menos encontro una ruta clara para {currentSession.match.merchant_name}</Text>
           <Text style={styles.subtitle}>Tu decision queda explicada y registrada para que la proxima vez entres mas rapido.</Text>
         </View>
 
         <RecommendationBreakdown
-          grossSavingsArs={grossSavingsArs}
-          pagamaxFeeArs={pagamaxFeeArs}
-          netSavingsArs={netSavingsArs}
+          grossSavingsArs={presentation.grossSavingsArs}
+          pagamaxFeeArs={presentation.pagamaxFeeArs}
+          netSavingsArs={presentation.netSavingsArs}
           confidence={{
             label: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 'Alta' : 'Media',
             score: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 0.9 : 0.72,
@@ -67,24 +65,24 @@ export default function SuccessScreen() {
 
         <View style={styles.totalRow}>
           <View style={styles.totalCard}>
-            <Text style={styles.totalLabel}>This month</Text>
+            <Text style={styles.totalLabel}>Este mes</Text>
             <Text style={styles.totalValue}>${summary.monthlyNetSavingsArs.toLocaleString('es-AR')}</Text>
           </View>
           <View style={styles.totalCard}>
-            <Text style={styles.totalLabel}>Lifetime</Text>
+            <Text style={styles.totalLabel}>Acumulado</Text>
             <Text style={styles.totalValue}>${summary.lifetimeNetSavingsArs.toLocaleString('es-AR')}</Text>
           </View>
         </View>
 
         <View style={styles.whyCard}>
-          <Text style={styles.whyTitle}>Why this worked</Text>
-          {recommendation.reasons.slice(0, 3).map((reason) => (
+          <Text style={styles.whyTitle}>Por que funciono</Text>
+          {presentation.qualifiers.slice(0, 3).map((reason) => (
             <Text key={reason} style={styles.whyText}>+ {reason}</Text>
           ))}
         </View>
 
         <SecondaryButton onPress={() => toggleSavedMerchant(currentSession.match.merchant_name)}>
-          {alreadySaved ? 'Remove merchant from quick access' : 'Save merchant for faster reuse'}
+          {alreadySaved ? 'Quitar de accesos rapidos' : 'Guardar comercio para reuso rapido'}
         </SecondaryButton>
 
         {recordedId ? <Text style={styles.recorded}>Guardado en tu actividad reciente.</Text> : null}
@@ -93,9 +91,9 @@ export default function SuccessScreen() {
       <View style={styles.footer}>
         <CtaBar
           title="Sigue con el siguiente pago"
-          primaryLabel="Check another payment"
+          primaryLabel="Revisar otro pago"
           onPressPrimary={() => router.replace('/scan')}
-          secondaryLabel="Return home"
+          secondaryLabel="Volver al inicio"
           onPressSecondary={() => router.replace('/')}
         />
       </View>

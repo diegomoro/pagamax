@@ -1,47 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { DEMO_ACTIVITY, DEMO_MISSED_OPPORTUNITIES, DEMO_OPPORTUNITIES, DEMO_REPEAT_MERCHANTS } from '@/lib/demo-data';
-import { summarizeActivity } from '@/lib/experience';
-import { ActivityItem } from '@/components/activity-item';
-import { BottomSheet, Card, IconButton, InlineNotice, LoadingBlock, PrimaryButton, ScreenScroll, SecondaryButton, ToggleRow } from '@/components/ui';
-import { MerchantCard } from '@/components/merchant-card';
-import { SavingsSummaryCard } from '@/components/savings-summary-card';
-import { SectionHeader } from '@/components/section-header';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DEMO_ACTIVITY, DEMO_REPEAT_MERCHANTS } from '@/lib/demo-data';
+import { BottomSheet, Card, IconButton, InlineNotice, LoadingBlock, SecondaryButton, ToggleRow } from '@/components/ui';
+import { BrandLockup } from '@/components/brand-lockup';
 import { usePagamax } from '@/context/pagamax-context';
-import { colors, spacing, typography } from '@/lib/theme';
+import { colors, radius, shadows, spacing, typography } from '@/lib/theme';
 
 const PRIVACY_POLICY_URL = 'https://github.com/diegomoro/pagamax/blob/main/app/PRIVACY_POLICY.md';
-
-function formatDateLabel(raw: string | null): string {
-  if (!raw) return 'sin fecha';
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return raw;
-  return date.toLocaleDateString('es-AR');
-}
-
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Buen dia';
-  if (hour < 20) return 'Buenas tardes';
-  return 'Buenas noches';
-}
 
 export default function HomeScreen() {
   const {
     activity,
-    activeMethodsCount,
     currentSession,
-    dataTimestamp,
     error,
     loading,
-    methods,
     promoIndex,
     settings,
-    toggleSavedMerchant,
     updateSettings,
   } = usePagamax();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!loading && !settings.onboardingCompleted) {
@@ -49,184 +31,95 @@ export default function HomeScreen() {
     }
   }, [loading, settings.onboardingCompleted]);
 
+  const quickMerchantNames = useMemo(() => (
+    Array.from(new Set([
+      ...settings.savedMerchants,
+      ...activity.slice(0, 3).map((item) => item.merchantName),
+      ...DEMO_ACTIVITY.slice(0, 2).map((item) => item.merchantName),
+      ...DEMO_REPEAT_MERCHANTS,
+    ])).slice(0, 3)
+  ), [activity, settings.savedMerchants]);
+
   if (loading) {
-    return <LoadingBlock label="Cargando Pagamax..." />;
+    return <LoadingBlock label="Cargando Paga Menos..." />;
   }
 
   if (error || !promoIndex) {
     return (
-      <ScreenScroll>
-        <InlineNotice title="No se pudieron cargar los datos" body={error ?? 'Verifica el bundle local e intenta nuevamente.'} tone="warning" />
-      </ScreenScroll>
+      <View style={styles.errorWrap}>
+        <InlineNotice title="No se pudieron cargar los datos" body={error ?? 'Intenta abrir la app de nuevo.'} tone="warning" />
+        <SecondaryButton onPress={() => router.push('/manual')}>Buscar comercio</SecondaryButton>
+      </View>
     );
   }
 
-  const liveActivity = activity.length > 0 ? activity : DEMO_ACTIVITY;
-  const summary = summarizeActivity(liveActivity);
-  const mostUsefulCategory = liveActivity[0]?.category ?? 'Supermercados';
-  const recentMerchantNames = Array.from(new Set([
-    ...settings.savedMerchants,
-    ...liveActivity.slice(0, 4).map((item) => item.merchantName),
-    ...DEMO_REPEAT_MERCHANTS,
-  ])).slice(0, 4);
-
   return (
     <>
-      <ScreenScroll contentContainerStyle={styles.screen}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>{greeting()}</Text>
-            <Text style={styles.wordmark}>Pagamax</Text>
-          </View>
+      <View style={[styles.screen, { paddingTop: insets.top + spacing.sm }]}>
+        <View style={styles.topBar}>
+          <BrandLockup compact showTagline={false} />
           <IconButton icon="options-outline" onPress={() => setSettingsOpen(true)} />
         </View>
 
-        <Text style={styles.subhead}>Pon Pagamax delante del pago y decide con claridad en menos de medio minuto.</Text>
+        <View style={styles.heroArea}>
+          <Pressable onPress={() => router.push('/scan')} style={({ pressed }) => [styles.scanCard, pressed && styles.scanCardPressed]}>
+            <LinearGradient colors={[colors.accent, colors.teal]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scanFill}>
+              <View style={styles.scanIconWrap}>
+                <Ionicons name="qr-code-outline" size={42} color={colors.teal} />
+              </View>
+              <Text style={styles.scanLabel}>Escanear QR</Text>
+              <Text style={styles.scanMeta}>Pago en tienda</Text>
+            </LinearGradient>
+          </Pressable>
 
-        <Card elevated style={styles.actionCard}>
-          <View style={styles.actionRow}>
-            <View style={styles.actionPrimary}>
-              <PrimaryButton onPress={() => router.push('/scan')}>Check a payment</PrimaryButton>
-            </View>
-            <View style={styles.actionSecondary}>
-              <SecondaryButton onPress={() => router.push('/checkout-link')}>Paste checkout link</SecondaryButton>
-            </View>
-          </View>
-          <View style={styles.microActions}>
-            <Pressable onPress={() => router.push('/opportunities')}>
-              <Text style={styles.microAction}>Nearby opportunities</Text>
-            </Pressable>
-            <Pressable onPress={() => router.push('/history')}>
-              <Text style={styles.microAction}>Recent merchants</Text>
+          <View style={styles.secondaryArea}>
+            <SecondaryButton onPress={() => router.push('/manual')}>Buscar comercio</SecondaryButton>
+            <Pressable onPress={() => router.push('/checkout-link')}>
+              <Text style={styles.linkAction}>Pegar link de pago</Text>
             </Pressable>
           </View>
-          <Text style={styles.trustLine}>
-            {(promoIndex.stats?.active_rows ?? promoIndex.promos.length).toLocaleString('es-AR')} promos de {new Set(promoIndex.promos.map((promo) => promo.issuer)).size} emisores · todo offline
-          </Text>
-        </Card>
 
-        <View style={styles.summaryRow}>
-          <SavingsSummaryCard
-            icon="calendar-outline"
-            label="Saved this month"
-            value={`$${summary.monthlyNetSavingsArs.toLocaleString('es-AR')}`}
-            footnote="neto para vos"
-            tone="teal"
-          />
-          <SavingsSummaryCard
-            icon="wallet-outline"
-            label="Lifetime net savings"
-            value={`$${summary.lifetimeNetSavingsArs.toLocaleString('es-AR')}`}
-            footnote="con fee visible"
-          />
-          <SavingsSummaryCard
-            icon="sparkles-outline"
-            label="Most useful category"
-            value={mostUsefulCategory}
-            footnote={`${activeMethodsCount} medios activos`}
-            tone="accent"
-          />
-        </View>
-
-        {currentSession ? (
-          <>
-            <SectionHeader title="Current best route" subtitle="Retoma el ultimo analisis sin volver a escanear." />
-            <ActivityItem
-              item={{
-                id: 'current-session',
-                merchantName: currentSession.match.merchant_name,
-                category: currentSession.recommendations[0]?.promo.category || 'General',
-                amountArs: currentSession.amountArs,
-                grossSavingsArs: Math.round(currentSession.recommendations[0]?.estimatedSavingsArs ?? 0),
-                pagamaxFeeArs: Math.round((currentSession.recommendations[0]?.estimatedSavingsArs ?? 0) * 0.16),
-                netSavingsArs: Math.round((currentSession.recommendations[0]?.estimatedSavingsArs ?? 0) * 0.84),
-                provider: currentSession.recommendations[0]?.method.provider ?? 'pagamax',
-                methodLabel: currentSession.recommendations[0]?.method.label ?? 'Sin ruta',
-                confidence: {
-                  label: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 'Alta' : 'Media',
-                  score: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 0.9 : 0.72,
-                  tone: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 'success' : 'warning',
-                  note: 'Revisa detalle, fee y caveats antes de seguir.',
-                },
-                createdAt: currentSession.createdAt,
-                source: currentSession.source,
-              }}
-              onPress={() => router.push('/results')}
-            />
-          </>
-        ) : null}
-
-        <SectionHeader
-          title="Repeat merchants"
-          subtitle="Atajos para comercios donde Pagamax suele rendir."
-          actionLabel="Ver historial"
-          onPressAction={() => router.push('/history')}
-        />
-        <View style={styles.repeatRow}>
-          {recentMerchantNames.map((merchant) => (
-            <Pressable
-              key={merchant}
-              style={styles.repeatPill}
-              onPress={() => router.push({ pathname: '/manual', params: { merchant } })}
-              onLongPress={() => toggleSavedMerchant(merchant)}
-            >
-              <Text style={styles.repeatLabel}>{merchant}</Text>
+          {currentSession ? (
+            <Pressable style={styles.resumeCard} onPress={() => router.push('/results')}>
+              <Text style={styles.resumeLabel}>Ultimo check</Text>
+              <Text numberOfLines={1} style={styles.resumeMerchant}>{currentSession.match.merchant_name}</Text>
             </Pressable>
-          ))}
+          ) : null}
+
+          {!currentSession && quickMerchantNames.length > 0 ? (
+            <View style={styles.quickArea}>
+              <Text style={styles.quickLabel}>Recientes</Text>
+              <View style={styles.quickRow}>
+                {quickMerchantNames.map((merchant) => (
+                  <Pressable
+                    key={merchant}
+                    style={styles.quickChip}
+                    onPress={() => router.push({ pathname: '/manual', params: { merchant } })}
+                  >
+                    <Text numberOfLines={1} style={styles.quickChipLabel}>{merchant}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
         </View>
+      </View>
 
-        <SectionHeader
-          title="Likely opportunities today"
-          subtitle="Valor esperado segun tus medios y categorias mas frecuentes."
-          actionLabel="See all"
-          onPressAction={() => router.push('/opportunities')}
-        />
-        {DEMO_OPPORTUNITIES.slice(0, 2).map((merchant) => (
-          <MerchantCard
-            key={merchant.id}
-            merchant={merchant}
-            onPress={() => router.push({ pathname: '/manual', params: { merchant: merchant.merchantName } })}
-          />
-        ))}
-
-        <SectionHeader title="Recent activity" subtitle="Ultimos pagos donde Pagamax encontro valor." actionLabel="Open history" onPressAction={() => router.push('/history')} />
-        {liveActivity.slice(0, 2).map((item) => (
-          <ActivityItem key={item.id} item={item} onPress={() => router.push('/history')} />
-        ))}
-
-        {DEMO_MISSED_OPPORTUNITIES[0] ? (
-          <InlineNotice
-            title="Missed opportunity"
-            body={`${DEMO_MISSED_OPPORTUNITIES[0].merchantName}: ${DEMO_MISSED_OPPORTUNITIES[0].note} Valor estimado perdido $${DEMO_MISSED_OPPORTUNITIES[0].estimatedNetSavingsArs.toLocaleString('es-AR')}.`}
-            tone="warning"
-          />
-        ) : null}
-
-        <Text style={styles.footerNote}>Datos actualizados al {formatDateLabel(dataTimestamp)}. Fees, ahorro y confianza se muestran de forma transparente.</Text>
-      </ScreenScroll>
-
-      <BottomSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} title="Control center">
+      <BottomSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} title="Centro de control">
         <ToggleRow
-          title="Optimization mode"
-          body={settings.optimizationMode === 'max_savings' ? 'Priorizando ahorro neto.' : 'Priorizando rapidez y menos friccion.'}
-          value={settings.optimizationMode === 'fastest_checkout'}
-          onValueChange={(value) => updateSettings({ optimizationMode: value ? 'fastest_checkout' : 'max_savings' })}
-        />
-        <ToggleRow
-          title="Notifications"
-          body="Avisos para oportunidades que superen tu umbral."
+          title="Notificaciones"
+          body="Avisos solo si valen la pena."
           value={settings.notificationsEnabled}
           onValueChange={(value) => updateSettings({ notificationsEnabled: value })}
         />
         <ToggleRow
-          title="Nearby insights"
-          body="Sugerencias de comercios cercanos cuando agreguen valor."
-          value={settings.locationInsightsEnabled}
-          onValueChange={(value) => updateSettings({ locationInsightsEnabled: value })}
+          title="Modo de optimizacion"
+          body={settings.optimizationMode === 'max_savings' ? 'Prioriza mas ahorro.' : 'Prioriza menos pasos.'}
+          value={settings.optimizationMode === 'fastest_checkout'}
+          onValueChange={(value) => updateSettings({ optimizationMode: value ? 'fastest_checkout' : 'max_savings' })}
         />
-        <SecondaryButton onPress={() => router.push('/profile')}>Open preferences</SecondaryButton>
-        <SecondaryButton onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>Privacy policy</SecondaryButton>
-        <Text style={styles.sheetFootnote}>{methods.length} medios configurados · umbral ${settings.alertThresholdArs.toLocaleString('es-AR')}</Text>
+        <SecondaryButton onPress={() => router.push('/profile')}>Abrir preferencias</SecondaryButton>
+        <SecondaryButton onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>Politica de privacidad</SecondaryButton>
       </BottomSheet>
     </>
   );
@@ -234,82 +127,113 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    paddingBottom: 132,
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: 128,
     gap: spacing.lg,
   },
-  header: {
+  errorWrap: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: spacing.md,
+    gap: spacing.md,
+    justifyContent: 'center',
+  },
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  greeting: {
+  heroArea: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: spacing.lg,
+  },
+  scanCard: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadows.lg,
+  },
+  scanCardPressed: {
+    transform: [{ scale: 0.985 }],
+  },
+  scanFill: {
+    minHeight: 320,
+    borderRadius: radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
+  scanIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.whiteSoft,
+  },
+  scanLabel: {
+    ...typography.displayLg,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  scanMeta: {
+    ...typography.headingSm,
+    color: colors.whiteSoft,
+    textAlign: 'center',
+  },
+  secondaryArea: {
+    gap: spacing.sm,
+  },
+  linkAction: {
+    ...typography.headingSm,
+    color: colors.accentPressed,
+    textAlign: 'center',
+  },
+  resumeCard: {
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.xxs,
+  },
+  resumeLabel: {
     ...typography.caption,
     color: colors.inkMuted,
   },
-  wordmark: {
-    ...typography.displayLg,
+  resumeMerchant: {
+    ...typography.headingSm,
     color: colors.ink,
   },
-  subhead: {
-    ...typography.bodyLg,
-    color: colors.inkMuted,
-    maxWidth: 320,
-  },
-  actionCard: {
-    gap: spacing.md,
-  },
-  actionRow: {
-    flexDirection: 'row',
+  quickArea: {
     gap: spacing.sm,
   },
-  actionPrimary: {
-    flex: 3,
-  },
-  actionSecondary: {
-    flex: 2,
-  },
-  microActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  microAction: {
-    ...typography.caption,
-    color: colors.accentPressed,
-  },
-  trustLine: {
+  quickLabel: {
     ...typography.caption,
     color: colors.inkMuted,
   },
-  summaryRow: {
+  quickRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  repeatRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  repeatPill: {
-    borderRadius: 999,
+  quickChip: {
+    maxWidth: '100%',
+    borderRadius: radius.full,
     backgroundColor: colors.surfaceSoft,
     borderWidth: 1,
     borderColor: colors.divider,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  repeatLabel: {
+  quickChipLabel: {
     ...typography.headingSm,
     color: colors.ink,
-  },
-  footerNote: {
-    ...typography.caption,
-    color: colors.inkMuted,
-    textAlign: 'center',
-  },
-  sheetFootnote: {
-    ...typography.caption,
-    color: colors.inkMuted,
-    textAlign: 'center',
   },
 });

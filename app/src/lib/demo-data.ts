@@ -144,18 +144,18 @@ export const DEMO_MISSED_OPPORTUNITIES = [
 export const ONBOARDING_PAGES = [
   {
     id: 'welcome',
-    title: 'Pagamax te ayuda antes de pagar',
-    body: 'Escanea un QR o pega un checkout link y compara rutas con ahorro estimado, fee visible y confianza clara.',
+    title: 'Paga Menos te ayuda antes de pagar',
+    body: 'Escanea un QR o pega un link de pago para ver rapido cuanto puedes ahorrar, que fee aplica y que ruta conviene mas.',
   },
   {
     id: 'how',
-    title: 'Menos friccion, mas claridad',
-    body: 'Te mostramos rapido la mejor opcion, las alternativas y por que califican, sin esconder caveats ni topes.',
+    title: 'Rapido, claro y sin vueltas',
+    body: 'Te mostramos primero la mejor opcion, luego las alternativas, los topes y las condiciones que importan de verdad.',
   },
   {
     id: 'permissions',
-    title: 'Permisos solo si agregan valor',
-    body: 'Podemos sugerir oportunidades cercanas o avisarte cuando valga la pena, pero tu decides si activarlo.',
+    title: 'Permisos solo si suman valor',
+    body: 'Puedes activar sugerencias cercanas o alertas utiles, pero nada es obligatorio para empezar a usar la app.',
   },
 ];
 

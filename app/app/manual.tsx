@@ -3,10 +3,16 @@ import { useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Card, Chip, IconButton, PageTitle, ScreenScroll, StickyButton } from '@/components/ui';
+import { Card, Chip, IconButton, InlineNotice, PageTitle, ScreenScroll, StickyButton } from '@/components/ui';
 import { usePagamax } from '@/context/pagamax-context';
 import { formatArs, parseAmountInput } from '@/lib/format';
 import { colors, radius, spacing, typography } from '@/lib/theme';
+
+function triggerHaptic(effect: Promise<void>): void {
+  void effect.catch(() => {
+    // Haptics are optional; form flow should continue if native feedback stalls.
+  });
+}
 
 export default function ManualEntryScreen() {
   const params = useLocalSearchParams<{ merchant?: string; amount?: string }>();
@@ -17,10 +23,10 @@ export default function ManualEntryScreen() {
 
   const suggestions = useMemo(() => {
     const query = merchantInput.trim().toLowerCase();
-    const base = query
-      ? merchantOptions.filter((option) => option.name.toLowerCase().includes(query))
-      : merchantOptions;
-    return base.slice(0, 5);
+    if (query.length < 2) return [];
+    return merchantOptions
+      .filter((option) => option.name.toLowerCase().includes(query))
+      .slice(0, 5);
   }, [merchantInput, merchantOptions]);
 
   const amountArs = parseAmountInput(amountInput);
@@ -28,14 +34,14 @@ export default function ManualEntryScreen() {
 
   const submit = async () => {
     if (!amountArs) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      triggerHaptic(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
       Alert.alert('Monto invalido', 'Ingresa un monto positivo en pesos.');
       return;
     }
 
     const merchantName = merchantInput.trim();
     if (!merchantName) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      triggerHaptic(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
       Alert.alert('Comercio requerido', 'Elige o escribe un comercio antes de continuar.');
       return;
     }
@@ -46,7 +52,7 @@ export default function ManualEntryScreen() {
       } else {
         runManualRecommendation(merchantName, amountArs);
       }
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      triggerHaptic(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
       router.replace('/results');
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo generar la recomendacion.';
@@ -60,11 +66,18 @@ export default function ManualEntryScreen() {
         <View style={styles.topBar}>
           <IconButton icon="arrow-back" onPress={() => router.back()} />
         </View>
-        <PageTitle title="Monto y comercio" subtitle="Completa el calculo si el QR no trae monto o si quieres buscar manualmente." />
+        <PageTitle title="Buscar comercio y monto" subtitle="Ingresa el total y elige el comercio para ver con que medio te conviene pagar menos." />
+
+        {pendingScan && !allowOverride ? (
+          <InlineNotice
+            title="Comercio detectado"
+            body={`Ya detectamos ${pendingScan.match.merchant_name}. Solo falta el monto para ordenar las mejores opciones.`}
+          />
+        ) : null}
 
         <Card elevated style={styles.formCard}>
           <View style={styles.amountWrap}>
-            <Text style={styles.fieldLabel}>Monto</Text>
+            <Text style={styles.fieldLabel}>Monto total</Text>
             <View style={styles.amountField}>
               <Text style={styles.amountPrefix}>$</Text>
               <TextInput
@@ -85,7 +98,7 @@ export default function ManualEntryScreen() {
               <View style={styles.chipRow}>
                 <Chip label={pendingScan.match.merchant_name} selected />
                 <Pressable onPress={() => setAllowOverride(true)}>
-                  <Text style={styles.clearChip}>x cambiar</Text>
+                  <Text style={styles.clearChip}>cambiar</Text>
                 </Pressable>
               </View>
             ) : (
@@ -102,19 +115,21 @@ export default function ManualEntryScreen() {
               </View>
             )}
 
-            <FlatList
-              data={suggestions}
-              keyExtractor={(item) => item.name}
-              scrollEnabled={false}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <Pressable style={styles.suggestion} onPress={() => setMerchantInput(item.name)}>
-                  <Text style={styles.suggestionName}>{item.name}</Text>
-                  <Text style={styles.suggestionMeta}>{item.promoCount} promos</Text>
-                </Pressable>
-              )}
-              ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
-            />
+            {suggestions.length > 0 ? (
+              <FlatList
+                data={suggestions}
+                keyExtractor={(item) => item.name}
+                scrollEnabled={false}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <Pressable style={styles.suggestion} onPress={() => setMerchantInput(item.name)}>
+                    <Text style={styles.suggestionName}>{item.name}</Text>
+                    <Text style={styles.suggestionMeta}>{item.promoCount} promos</Text>
+                  </Pressable>
+                )}
+                ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
+              />
+            ) : null}
           </View>
         </Card>
       </ScreenScroll>

@@ -1,0 +1,9 @@
+# EAS may resolve the npm workspace root when archiving.
+tmp/
+scraper/output*/
+scraper/tmp/
+scraper/.cache/
+app/web-dist/
+app/dist-android-test/
+app/.expo/
+node_modules/

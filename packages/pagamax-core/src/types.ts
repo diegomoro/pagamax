@@ -119,8 +119,8 @@ export interface RecommendationInput {
 export interface PaymentRecommendation {
   method: PaymentMethodProfile;
   promo: PromoSummary;
-  source: 'merchant' | 'general';
-  valueType: 'discount' | 'cashback' | 'financing_estimate';
+  source: 'merchant' | 'general' | 'fallback';
+  valueType: 'discount' | 'cashback' | 'financing_estimate' | 'fallback';
   estimatedSavingsArs: number;
   estimatedNetPaymentArs: number;
   rankingScore: number;

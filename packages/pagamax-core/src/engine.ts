@@ -5,7 +5,7 @@ import type {
   PromoCandidate,
   PromoSummary,
   RecommendationInput,
-} from './types.js';
+} from './types';
 
 const CARD_TYPE_ALIASES: Record<FundingType, string[]> = {
   credit: ['credit', 'credito'],
@@ -161,6 +161,7 @@ function estimatePromoValue(
 function rankingMultiplier(valueType: PaymentRecommendation['valueType']): number {
   if (valueType === 'discount') return 1.0;
   if (valueType === 'cashback') return 0.96;
+  if (valueType === 'fallback') return 0;
   return 0.82;
 }
 

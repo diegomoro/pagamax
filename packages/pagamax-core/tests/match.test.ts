@@ -30,7 +30,20 @@ describe('matchQr', () => {
     );
 
     expect(result.general_promos).toHaveLength(0);
-    expect(result.filters_applied.some(entry => entry.startsWith('general_category(Tecnología'))).toBe(true);
+    expect(result.filters_applied.some(entry => entry.startsWith('general_category(Tecnolog'))).toBe(true);
+  });
+
+  it('does not apply unrelated retail general promos to utility QR payloads', () => {
+    const result = matchQr(
+      '000201010211520449005802AR5904EPEC6007CORDOBA6304FFFF',
+      promoIndex,
+      { today: '2026-04-03', allIssuers: true },
+    );
+
+    expect(result.qr.mcc).toBe('4900');
+    expect(result.qr.name).toBe('EPEC');
+    expect(result.general_promos).toHaveLength(0);
+    expect(result.filters_applied.some(entry => entry.startsWith('general_category(Servicios'))).toBe(true);
   });
 });
 

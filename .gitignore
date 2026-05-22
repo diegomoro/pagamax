@@ -6,6 +6,11 @@ node_modules/
 # Build output
 dist/
 build/
+site/
+tmp/
+app/web-dist/
+app/dist-android-test/
+app/.expo/
 *.js.map
 
 # Scraper output (data files — large, regenerated on each run)

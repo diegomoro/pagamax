@@ -26,11 +26,19 @@ import { colors, radius, shadows, spacing, timing, typography } from '@/lib/them
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
+function triggerHaptic(effect: Promise<void>): void {
+  void effect.catch(() => {
+    // Haptics are optional; control actions must never wait on them.
+  });
+}
+
 export function ScreenScroll(props: ScrollViewProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <ScrollView
       {...props}
-      contentContainerStyle={[styles.screen, props.contentContainerStyle]}
+      contentContainerStyle={[styles.screen, { paddingTop: insets.top + spacing.md }, props.contentContainerStyle]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     />
@@ -93,8 +101,8 @@ export function Chip({
   selected?: boolean;
   onPress?: () => void;
 }) {
-  const handlePress = async () => {
-    await Haptics.selectionAsync();
+  const handlePress = () => {
+    triggerHaptic(Haptics.selectionAsync());
     onPress?.();
   };
 
@@ -139,8 +147,8 @@ function BaseButton({
   style,
   ...props
 }: PressableProps & { children: ReactNode; kind: 'primary' | 'secondary'; stretch?: boolean }) {
-  const handlePress = async (event: GestureResponderEvent) => {
-    await Haptics.impactAsync(kind === 'primary' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light);
+  const handlePress = (event: GestureResponderEvent) => {
+    triggerHaptic(Haptics.impactAsync(kind === 'primary' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light));
     onPress?.(event);
   };
 
@@ -156,7 +164,13 @@ function BaseButton({
         typeof style === 'function' ? style({ pressed }) : style,
       ]}
     >
-      <Text style={kind === 'primary' ? styles.buttonPrimaryLabel : styles.buttonSecondaryLabel}>{children}</Text>
+      {kind === 'primary' ? (
+        <LinearGradient colors={[colors.accent, colors.teal]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.buttonPrimaryFill}>
+          <Text style={styles.buttonPrimaryLabel}>{children}</Text>
+        </LinearGradient>
+      ) : (
+        <Text style={styles.buttonSecondaryLabel}>{children}</Text>
+      )}
     </Pressable>
   );
 }
@@ -180,8 +194,8 @@ export function IconButton({
   tone?: 'surface' | 'ghost' | 'light';
   size?: number;
 }) {
-  const handlePress = async () => {
-    await Haptics.selectionAsync();
+  const handlePress = () => {
+    triggerHaptic(Haptics.selectionAsync());
     onPress?.();
   };
 
@@ -199,14 +213,14 @@ export function IconButton({
 export function FloatingActionButton({ onPress }: { onPress?: () => void }) {
   const insets = useSafeAreaInsets();
 
-  const handlePress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handlePress = () => {
+    triggerHaptic(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
     onPress?.();
   };
 
   return (
     <Pressable onPress={handlePress} style={({ pressed }) => [styles.fab, { bottom: insets.bottom + 18 }, pressed && styles.buttonPressed]}>
-      <Ionicons name="qr-code-outline" size={24} color={colors.whiteSoft} />
+      <Ionicons name="qr-code-outline" size={28} color={colors.whiteSoft} />
     </Pressable>
   );
 }
@@ -222,8 +236,8 @@ export function ToggleRow({
   value: boolean;
   onValueChange: SwitchProps['onValueChange'];
 }) {
-  const handleValueChange: SwitchProps['onValueChange'] = async (next) => {
-    await Haptics.selectionAsync();
+  const handleValueChange: SwitchProps['onValueChange'] = (next) => {
+    triggerHaptic(Haptics.selectionAsync());
     onValueChange?.(next);
   };
 
@@ -538,13 +552,20 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   buttonPrimary: {
-    backgroundColor: colors.accent,
+    overflow: 'hidden',
     ...shadows.sm,
   },
   buttonSecondary: {
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  buttonPrimaryFill: {
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
   },
   buttonDisabled: {
     opacity: 0.45,
@@ -584,8 +605,8 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     alignSelf: 'center',
-    width: 64,
-    height: 64,
+    width: 72,
+    height: 72,
     borderRadius: radius.full,
     backgroundColor: colors.accent,
     alignItems: 'center',

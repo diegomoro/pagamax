@@ -10,8 +10,20 @@
     "mobile:start": "npm run start --workspace @pagamax/app",
     "mobile:android": "npm run android --workspace @pagamax/app",
     "mobile:preview": "npm run build:preview --workspace @pagamax/app",
+    "data:refresh": "node ./scripts/run-daily-promo-refresh.mjs",
+    "data:publish": "node ./scripts/build-remote-promo-site.mjs",
     "data:sync": "node ./scripts/sync-mobile-data.mjs",
     "core:test": "npm run test --workspace @pagamax/core",
     "core:build": "npm run build --workspace @pagamax/core"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "@types/react": "19.1.10"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.10",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   }
 }
