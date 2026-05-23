@@ -10,7 +10,7 @@ import {
   type PromoSummary,
 } from '@pagamax/core';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AppState, InteractionManager, Platform, type AppStateStatus } from 'react-native';
+import { InteractionManager, Platform } from 'react-native';
 import { inferMerchantFromCheckoutUrl } from '@/lib/demo-data';
 import { buildActivityFromSession } from '@/lib/experience';
 import { buildMerchantOptions, loadDefaultMethods, loadInitialPromoIndex, syncRemotePromoIndex, type MerchantOption } from '@/lib/data';
@@ -147,13 +147,6 @@ function mergeSettings(base: AppSettings, patch: Partial<AppSettings>): AppSetti
   };
 }
 
-function shouldCheckForUpdatesOnResume(lastCheckedAt: string | null): boolean {
-  if (!lastCheckedAt) return true;
-  const checkedAtMs = new Date(lastCheckedAt).getTime();
-  if (Number.isNaN(checkedAtMs)) return true;
-  return (Date.now() - checkedAtMs) > (15 * 60 * 1000);
-}
-
 function buildFallbackRecommendations(
   methods: StoredPaymentMethod[],
   amountArs: number,
@@ -222,8 +215,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<SavingsActivity[]>([]);
   const [promoDataStatus, setPromoDataStatus] = useState<PromoDataStatus>(DEFAULT_PROMO_DATA_STATUS);
   const [diagnostics, setDiagnostics] = useState<DiagnosticsEvent[]>([]);
-  const appState = useRef<AppStateStatus>(AppState.currentState);
-  const startupSyncStarted = useRef(false);
+  const promoSyncInFlight = useRef(false);
 
   function appendDiagnostic(
     category: DiagnosticsEvent['category'],
@@ -255,6 +247,9 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
   }
 
   async function checkForPromoUpdates() {
+    if (promoSyncInFlight.current) return;
+    promoSyncInFlight.current = true;
+
     if (isLocalWebPreview()) {
       setPromoDataStatus((prev) => ({
         ...prev,
@@ -262,6 +257,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
         lastCheckedAt: new Date().toISOString(),
         lastError: null,
       }));
+      promoSyncInFlight.current = false;
       return;
     }
 
@@ -302,6 +298,8 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
         lastError: message,
       }));
       appendDiagnostic('data', 'error', 'Fallo la revision remota de descuentos', message);
+    } finally {
+      promoSyncInFlight.current = false;
     }
   }
 
@@ -366,33 +364,6 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refreshData();
   }, []);
-
-  useEffect(() => {
-    if (!loading && promoIndex && !startupSyncStarted.current && !isLocalWebPreview()) {
-      startupSyncStarted.current = true;
-      void checkForPromoUpdates();
-    }
-  }, [loading, promoIndex]);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      const wasBackgrounded = appState.current === 'background' || appState.current === 'inactive';
-      appState.current = nextState;
-
-      if (
-        nextState === 'active' &&
-        wasBackgrounded &&
-        !loading &&
-        promoIndex &&
-        !isLocalWebPreview() &&
-        shouldCheckForUpdatesOnResume(promoDataStatus.lastCheckedAt)
-      ) {
-        void checkForPromoUpdates();
-      }
-    });
-
-    return () => subscription.remove();
-  }, [loading, promoDataStatus.lastCheckedAt, promoIndex]);
 
   const activeMethods = useMemo(() => methods.filter((method) => method.enabled), [methods]);
 
