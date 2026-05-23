@@ -1,43 +1,67 @@
 [
   {
-    "id": "modo-santander-visa-credit-qr",
-    "provider": "modo",
-    "label": "MODO + Santander Visa credit",
+    "id": "mercadopago-balance-qr",
+    "provider": "mercadopago",
+    "label": "Mercado Pago",
     "rail": "qr",
-    "walletLabel": "Santander",
-    "cardBrand": "Visa",
+    "walletLabel": "Mercado Pago",
+    "cardType": "account_money",
+    "isDefault": true
+  },
+  {
+    "id": "naranjax-balance-qr",
+    "provider": "naranjax",
+    "label": "Naranja X",
+    "rail": "qr",
+    "walletLabel": "Naranja X",
+    "cardType": "account_money"
+  },
+  {
+    "id": "bbva-mastercard-black-qr",
+    "provider": "bbva",
+    "label": "BBVA Mastercard Black",
+    "rail": "qr",
+    "walletLabel": "BBVA",
+    "cardBrand": "Mastercard",
     "cardType": "credit"
   },
   {
-    "id": "modo-comafi-master-debit-qr",
-    "provider": "modo",
-    "label": "MODO + Comafi Mastercard debit",
-    "rail": "qr",
-    "walletLabel": "Comafi",
-    "cardBrand": "Mastercard",
-    "cardType": "debit"
-  },
-  {
-    "id": "bbva-visa-credit-qr",
+    "id": "bbva-visa-signature-qr",
     "provider": "bbva",
-    "label": "App BBVA + Visa credit",
+    "label": "BBVA Visa Signature",
     "rail": "qr",
     "walletLabel": "BBVA",
     "cardBrand": "Visa",
     "cardType": "credit"
   },
   {
-    "id": "mercadopago-balance-qr",
-    "provider": "mercadopago",
-    "label": "Mercado Pago balance",
+    "id": "carrefour-bank-qr",
+    "provider": "carrefour_bank",
+    "label": "Banco Carrefour",
     "rail": "qr",
-    "walletLabel": "Mercado Pago",
+    "walletLabel": "Banco Carrefour",
     "cardType": "account_money"
+  },
+  {
+    "id": "bna-plus-qr",
+    "provider": "bna",
+    "label": "BNA+ QR",
+    "rail": "qr",
+    "walletLabel": "BNA+",
+    "cardType": "debit"
+  },
+  {
+    "id": "bancon-debit-qr",
+    "provider": "bancon",
+    "label": "Bancon debit",
+    "rail": "qr",
+    "walletLabel": "Bancon",
+    "cardType": "debit"
   },
   {
     "id": "personalpay-prepaid-qr",
     "provider": "personalpay",
-    "label": "Personal Pay prepaid",
+    "label": "Personal Pay",
     "rail": "qr",
     "walletLabel": "Personal Pay",
     "cardBrand": "Visa",

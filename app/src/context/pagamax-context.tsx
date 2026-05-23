@@ -15,6 +15,7 @@ import { inferMerchantFromCheckoutUrl } from '@/lib/demo-data';
 import { buildActivityFromSession } from '@/lib/experience';
 import { buildMerchantOptions, loadDefaultMethods, loadInitialPromoIndex, syncRemotePromoIndex, type MerchantOption } from '@/lib/data';
 import { STORAGE_KEYS } from '@/lib/storage';
+import type { HandoffOutcome } from '@/lib/handoff';
 import type {
   AppSettings,
   DiagnosticsEvent,
@@ -42,7 +43,7 @@ interface PagamaxContextValue {
   refreshData: () => Promise<void>;
   checkForPromoUpdates: () => Promise<void>;
   clearDiagnostics: () => Promise<void>;
-  recordHandoff: (provider: string, outcome: 'deep_link' | 'store' | 'error', detail?: string) => void;
+  recordHandoff: (provider: string, outcome: HandoffOutcome | 'error', detail?: string) => void;
   toggleMethodEnabled: (id: string) => void;
   updateMethod: (id: string, patch: Partial<StoredPaymentMethod>) => void;
   resetMethods: () => Promise<void>;
@@ -52,6 +53,7 @@ interface PagamaxContextValue {
   prepareScan: (payload: string) => MatchResult;
   clearPendingScan: () => void;
   runManualRecommendation: (merchantName: string, amountArs: number) => RecommendationSession;
+  runScanRecommendation: (payload: string, amountArs?: number, merchantOverride?: string) => RecommendationSession;
   runPendingScanRecommendation: (amountArs?: number, merchantOverride?: string) => RecommendationSession;
   runCheckoutRecommendation: (checkoutUrl: string, amountArs: number, merchantOverride?: string) => RecommendationSession;
   recordSuccessfulRecommendation: (recommendationIndex?: number) => SavingsActivity;
@@ -114,11 +116,46 @@ const FALLBACK_PROMO_BASE: PromoSummary = {
   description_short: 'Paga con una ruta disponible y revisa si tu billetera o banco muestra puntos, cuotas o reintegros antes de confirmar.',
 };
 
+const USER_METHOD_SEED_IDS = new Set([
+  'mercadopago-balance-qr',
+  'naranjax-balance-qr',
+  'bbva-mastercard-black-qr',
+  'bbva-visa-signature-qr',
+  'carrefour-bank-qr',
+  'bna-plus-qr',
+  'bancon-debit-qr',
+  'personalpay-prepaid-qr',
+]);
+
+const LEGACY_DEMO_METHOD_IDS = new Set([
+  'modo-santander-visa-credit-qr',
+  'modo-comafi-master-debit-qr',
+  'bbva-visa-credit-qr',
+]);
+
 function normalizeStoredMethod(method: PaymentMethodProfile): StoredPaymentMethod {
   return {
     ...method,
     enabled: true,
   };
+}
+
+function hydrateStoredMethods(storedMethodsRaw: string | null, seedMethods: StoredPaymentMethod[]): StoredPaymentMethod[] {
+  if (!storedMethodsRaw) return seedMethods;
+
+  const storedMethods = JSON.parse(storedMethodsRaw) as StoredPaymentMethod[];
+  const hasLegacyDemoMethods = storedMethods.some((method) => LEGACY_DEMO_METHOD_IDS.has(method.id));
+  const hasCurrentUserSeed = seedMethods.every((method) => storedMethods.some((stored) => stored.id === method.id));
+
+  if (hasLegacyDemoMethods || !hasCurrentUserSeed) {
+    return seedMethods;
+  }
+
+  const knownIds = new Set(storedMethods.map((method) => method.id));
+  return [
+    ...storedMethods,
+    ...seedMethods.filter((method) => !knownIds.has(method.id) && USER_METHOD_SEED_IDS.has(method.id)),
+  ];
 }
 
 async function persistMethods(methods: StoredPaymentMethod[]): Promise<void> {
@@ -156,9 +193,11 @@ function buildFallbackRecommendations(
   return methods
     .filter((method) => method.rail === 'qr' || method.rail === 'card')
     .sort((left, right) => {
+      const leftDefault = left.isDefault ? 1 : 0;
+      const rightDefault = right.isDefault ? 1 : 0;
       const leftQr = left.rail === 'qr' ? 1 : 0;
       const rightQr = right.rail === 'qr' ? 1 : 0;
-      return rightQr - leftQr || left.label.localeCompare(right.label);
+      return rightDefault - leftDefault || rightQr - leftQr || left.label.localeCompare(right.label);
     })
     .slice(0, topN)
     .map((method, index) => ({
@@ -303,9 +342,10 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function recordHandoff(provider: string, outcome: 'deep_link' | 'store' | 'error', detail?: string) {
+  function recordHandoff(provider: string, outcome: HandoffOutcome | 'error', detail?: string) {
     const messages = {
-      deep_link: `Se abrio ${provider} con deep link`,
+      payment_flow: `Se abrio ${provider} en flujo de pago`,
+      app: `Se abrio ${provider}`,
       store: `Se abrio Google Play para ${provider}`,
       error: `Fallo el handoff para ${provider}`,
     } as const;
@@ -331,10 +371,11 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
       setMerchantOptions([]);
 
       const seedMethods = loadDefaultMethods().map(normalizeStoredMethod);
-      const hydratedMethods = storedMethodsRaw
-        ? JSON.parse(storedMethodsRaw) as StoredPaymentMethod[]
-        : seedMethods;
+      const hydratedMethods = hydrateStoredMethods(storedMethodsRaw, seedMethods);
       setMethods(hydratedMethods);
+      if (JSON.stringify(hydratedMethods) !== storedMethodsRaw) {
+        void persistMethods(hydratedMethods);
+      }
 
       const hydratedSettings = storedSettingsRaw
         ? mergeSettings(DEFAULT_SETTINGS, JSON.parse(storedSettingsRaw) as AppSettings)
@@ -480,6 +521,27 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     return buildSession(match, amountArs, 'manual', merchantName);
   }
 
+  function runScanRecommendation(payload: string, amountArs?: number, merchantOverride?: string) {
+    if (!promoIndex) throw new Error('Promo index is not loaded');
+
+    const preparedMatch = matchQr(payload, promoIndex, { allIssuers: true });
+    const merchantName = merchantOverride?.trim();
+    const match = merchantName && merchantName !== preparedMatch.merchant_name
+      ? matchMerchantName(merchantName, promoIndex, { allIssuers: true })
+      : preparedMatch;
+
+    const resolvedAmount = amountArs ?? preparedMatch.qr.amount_ars ?? SCAN_REFERENCE_AMOUNT_ARS;
+    const amountEstimated = amountArs == null && preparedMatch.qr.amount_ars == null;
+
+    clearPendingScan();
+    appendDiagnostic('scan', 'info', 'QR procesado', `match=${preparedMatch.match_method} merchant=${preparedMatch.merchant_name}`);
+    appendDiagnostic('match', 'info', 'Recomendacion desde QR ejecutada', `merchant=${merchantName ?? preparedMatch.merchant_name} match=${match.match_method}`);
+    return buildSession(match, resolvedAmount, 'scan', merchantName ?? preparedMatch.merchant_name, {
+      qrPayload: payload,
+      amountEstimated,
+    });
+  }
+
   function runPendingScanRecommendation(amountArs?: number, merchantOverride?: string) {
     if (!promoIndex) throw new Error('Promo index is not loaded');
     if (!pendingScan) throw new Error('No hay un QR pendiente para continuar.');
@@ -552,6 +614,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     prepareScan,
     clearPendingScan,
     runManualRecommendation,
+    runScanRecommendation,
     runPendingScanRecommendation,
     runCheckoutRecommendation,
     recordSuccessfulRecommendation,

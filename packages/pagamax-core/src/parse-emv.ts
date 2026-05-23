@@ -32,6 +32,8 @@ export interface ParsedQr {
   country: string | null;
   cbu: string | null;
   amountArs: number | null;
+  paymentProvider: string | null;
+  qrType: 'static' | 'dynamic' | 'unknown';
   pointOfInitiation: string | null;
   paymentNetworks: EmvTlv[];
 }
@@ -100,6 +102,27 @@ function extractCuit(tlv: EmvTlv): string | null {
   return digits.length >= 11 ? digits.slice(-11) : null;
 }
 
+function inferPaymentProvider(paymentNetworks: EmvTlv[]): string | null {
+  const raw = paymentNetworks
+    .flatMap(network => [network.value, ...(network.children ?? []).map(child => child.value)])
+    .join(' ')
+    .toLowerCase();
+
+  if (!raw) return null;
+  if (raw.includes('mercadopago') || raw.includes('mercado pago')) return 'mercadopago';
+  if (raw.includes('modo') || raw.includes('playdigital')) return 'modo';
+  if (raw.includes('naranja')) return 'naranjax';
+  if (raw.includes('prisma')) return 'prisma';
+  if (raw.includes('coelsa')) return 'coelsa';
+  return null;
+}
+
+function inferQrType(pointOfInitiation: string | null): ParsedQr['qrType'] {
+  if (pointOfInitiation === '11') return 'static';
+  if (pointOfInitiation === '12') return 'dynamic';
+  return 'unknown';
+}
+
 /**
  * Parse an EMVCo MPM QR payload string and extract key merchant fields.
  */
@@ -132,6 +155,8 @@ export function parseQr(payload: string): ParsedQr {
     if (tlv) paymentNetworks.push(tlv);
   }
 
+  const pointOfInitiation = fields.get('01')?.value ?? null;
+
   return {
     raw: payload,
     fields,
@@ -142,7 +167,9 @@ export function parseQr(payload: string): ParsedQr {
     country: fields.get('58')?.value ?? null,
     cbu,
     amountArs: Number.isFinite(amountArs) ? amountArs : null,
-    pointOfInitiation: fields.get('01')?.value ?? null,
+    paymentProvider: inferPaymentProvider(paymentNetworks),
+    qrType: inferQrType(pointOfInitiation),
+    pointOfInitiation,
     paymentNetworks,
   };
 }

@@ -82,6 +82,8 @@ export interface MatchResult {
     city: string | null;
     cbu: string | null;
     amount_ars: number | null;
+    payment_provider: string | null;
+    qr_type: 'static' | 'dynamic' | 'unknown';
   };
   promos: PromoMatch[];
   general_promos: PromoMatch[];
@@ -102,6 +104,7 @@ export interface PaymentMethodProfile {
   walletLabel?: string;
   cardBrand?: string;
   cardType?: FundingType;
+  isDefault?: boolean;
 }
 
 export interface PromoCandidate {

@@ -6,16 +6,25 @@ import { CompactRecommendationRow, HeroRecommendationCard } from '@/components/r
 import { EmptyState, InlineNotice, LoadingBlock } from '@/components/ui';
 import { usePagamax } from '@/context/pagamax-context';
 import { buildRecommendationPresentation, sortRecommendationsForMode } from '@/lib/experience';
-import { getPaymentAppConfig } from '@/config/payment-apps';
-import { openPaymentApp } from '@/lib/handoff';
+import { buildPaymentHandoffPlan, openPaymentApp } from '@/lib/handoff';
 import { formatArs } from '@/lib/format';
 import { colors, spacing, typography } from '@/lib/theme';
+import type { RecommendationSession } from '@/types/app';
 
 function formatDateLabel(raw: string | null): string {
   if (!raw) return 'hoy';
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return raw;
   return date.toLocaleDateString('es-AR');
+}
+
+function formatQrMeta(session: RecommendationSession): string | null {
+  const parts = [
+    session.match.qr.payment_provider ? `QR ${session.match.qr.payment_provider}` : null,
+    session.match.qr.qr_type !== 'unknown' ? session.match.qr.qr_type : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(' - ') : null;
 }
 
 export default function ResultsScreen() {
@@ -38,19 +47,26 @@ export default function ResultsScreen() {
   const ranked = sortRecommendationsForMode(currentSession, settings.optimizationMode).slice(0, 5);
   const [hero, ...rest] = ranked;
   const heroPresentation = hero ? buildRecommendationPresentation(currentSession, hero) : null;
+  const handoffPlan = hero ? buildPaymentHandoffPlan(currentSession, hero) : null;
+  const qrMeta = formatQrMeta(currentSession);
   const alternativeCount = rest.length;
 
-  const handleOpen = async (provider: string) => {
+  const handleOpen = async () => {
+    if (!hero || !handoffPlan) return;
+
     try {
-      const mode = await openPaymentApp(provider);
-      recordHandoff(provider, mode);
+      const mode = await openPaymentApp(hero.method.provider, {
+        merchantName: currentSession.match.merchant_name,
+        amountArs: currentSession.amountEstimated ? undefined : currentSession.amountArs,
+        qrPayload: currentSession.qrPayload,
+      });
+      recordHandoff(hero.method.provider, mode, handoffPlan.detail);
       if (mode === 'store') {
-        const config = getPaymentAppConfig(provider);
-        Alert.alert('Se abrio Google Play', `No hay deep link verificado para ${config.label}.`);
+        Alert.alert('Se abrio Google Play', `No se pudo abrir ${handoffPlan.label} en este telefono.`);
       }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo abrir la app seleccionada.';
-      recordHandoff(provider, 'error', message);
+      recordHandoff(hero.method.provider, 'error', message);
       Alert.alert('No se pudo abrir la app', message);
     }
   };
@@ -67,6 +83,7 @@ export default function ResultsScreen() {
             <Text style={styles.amount}>
               {currentSession.amountEstimated ? 'QR sin monto - ranking estimado' : `${formatArs(currentSession.amountArs)} - ${currentSession.source === 'scan' ? 'QR' : currentSession.source === 'online' ? 'link de pago' : 'manual'}`}
             </Text>
+            {qrMeta ? <Text style={styles.amount}>{qrMeta}</Text> : null}
 
             {currentSession.amountEstimated ? (
               <Pressable
@@ -84,7 +101,7 @@ export default function ResultsScreen() {
               </Pressable>
             ) : null}
 
-            {hero && heroPresentation ? (
+            {hero && heroPresentation && handoffPlan ? (
               <HeroRecommendationCard
                 recommendation={hero}
                 confidence={heroPresentation.confidence}
@@ -93,15 +110,20 @@ export default function ResultsScreen() {
                 netSavingsArs={heroPresentation.netSavingsArs}
                 qualifiers={heroPresentation.qualifiers}
                 dataDateLabel={formatDateLabel(dataTimestamp)}
-                primaryLabel={getPaymentAppConfig(hero.method.provider).verifiedDeepLink || getPaymentAppConfig(hero.method.provider).androidPackage ? `Abrir ${getPaymentAppConfig(hero.method.provider).label}` : `Buscar ${getPaymentAppConfig(hero.method.provider).label}`}
+                primaryLabel={handoffPlan.primaryLabel}
                 onPressDetails={() => router.push({ pathname: '/detail', params: { index: '0' } })}
-                onPressPrimary={() => void handleOpen(hero.method.provider)}
+                onPressPrimary={() => void handleOpen()}
               />
             ) : (
               <EmptyState title="No encontramos opciones elegibles" body="Prueba con otro monto, activa mas medios o corrige el comercio." />
             )}
 
-            <Text style={styles.helper}>Abre tu mejor ruta o revisa el detalle.</Text>
+            {handoffPlan ? (
+              <InlineNotice
+                title={handoffPlan.confidenceLabel}
+                body={`${handoffPlan.instruction} ${handoffPlan.supportsQrPayload || handoffPlan.supportsAmount ? 'Puede recibir datos del QR.' : 'No envia QR ni monto automaticamente.'}`}
+              />
+            ) : null}
 
             {settings.debugEnabled ? (
               <InlineNotice
@@ -190,10 +212,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   estimatedBody: {
-    ...typography.bodySm,
-    color: colors.inkMuted,
-  },
-  helper: {
     ...typography.bodySm,
     color: colors.inkMuted,
   },

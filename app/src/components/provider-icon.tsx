@@ -12,6 +12,8 @@ const PROVIDER_COLORS: Record<string, string> = {
   ypf: '#1544b0',
   shellbox: '#cf1f2f',
   carrefour_bank: '#0066cc',
+  bna: '#00a3e0',
+  bancon: '#006747',
 };
 
 export function ProviderIcon({ provider, size = 42 }: { provider: string; size?: number }) {

@@ -41,6 +41,8 @@ interface MatchSeed {
   city: string | null;
   cbu: string | null;
   amountArs: number | null;
+  paymentProvider?: string | null;
+  qrType?: 'static' | 'dynamic' | 'unknown';
 }
 
 function normalizeName(name: string): string {
@@ -295,6 +297,8 @@ function buildMatchFromSeed(seed: MatchSeed, promoIndex: PromoIndex, opts: Match
       city: seed.city,
       cbu: seed.cbu,
       amount_ars: seed.amountArs,
+      payment_provider: seed.paymentProvider ?? null,
+      qr_type: seed.qrType ?? 'unknown',
     },
     promos,
     general_promos: generalPromos,
@@ -318,6 +322,8 @@ export function matchMerchantName(merchantName: string, promoIndex: PromoIndex, 
     city: null,
     cbu: null,
     amountArs: null,
+    paymentProvider: null,
+    qrType: 'unknown',
   }, promoIndex, opts);
 }
 

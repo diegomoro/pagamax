@@ -9,6 +9,7 @@ describe('parseQr', () => {
     expect(parsed.mcc).toBe('5411');
     expect(parsed.city).toBe('CABA');
     expect(parsed.amountArs).toBe(30000);
+    expect(parsed.qrType).toBe('static');
   });
 
   it('extracts nested CUITs from tag 50 templates', () => {
@@ -16,5 +17,13 @@ describe('parseQr', () => {
 
     expect(parsed.cuit).toBe('30692240142');
     expect(parsed.merchantName).toBe('Samsung');
+  });
+
+  it('extracts provider hints when merchant account templates expose them', () => {
+    const parsed = parseQr('00020101021226270011mercadopago010812345678520454115802AR5909Carrefour6004CABA5405123456304FFFF');
+
+    expect(parsed.paymentProvider).toBe('mercadopago');
+    expect(parsed.qrType).toBe('dynamic');
+    expect(parsed.amountArs).toBe(12345);
   });
 });

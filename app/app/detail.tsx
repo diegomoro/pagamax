@@ -7,8 +7,7 @@ import { RecommendationBreakdown } from '@/components/recommendation-breakdown';
 import { RuleGrid } from '@/components/rule-grid';
 import { EmptyState, IconButton, Pill, SecondaryButton } from '@/components/ui';
 import { usePagamax } from '@/context/pagamax-context';
-import { getPaymentAppConfig } from '@/config/payment-apps';
-import { openPaymentApp } from '@/lib/handoff';
+import { buildPaymentHandoffPlan, openPaymentApp } from '@/lib/handoff';
 import { buildRecommendationPresentation, sortRecommendationsForMode } from '@/lib/experience';
 import { colors, radius, shadows, spacing, typography } from '@/lib/theme';
 
@@ -79,12 +78,16 @@ export default function DetailScreen() {
     );
   }
 
-  const config = getPaymentAppConfig(recommendation.method.provider);
   const presentation = buildRecommendationPresentation(currentSession, recommendation);
+  const handoffPlan = buildPaymentHandoffPlan(currentSession, recommendation);
   const handleOpen = async () => {
     try {
-      const mode = await openPaymentApp(recommendation.method.provider);
-      recordHandoff(recommendation.method.provider, mode);
+      const mode = await openPaymentApp(recommendation.method.provider, {
+        merchantName: currentSession.match.merchant_name,
+        amountArs: currentSession.amountEstimated ? undefined : currentSession.amountArs,
+        qrPayload: currentSession.qrPayload,
+      });
+      recordHandoff(recommendation.method.provider, mode, handoffPlan.detail);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo abrir la app seleccionada.';
       recordHandoff(recommendation.method.provider, 'error', message);
@@ -98,10 +101,10 @@ export default function DetailScreen() {
           <IconButton icon="arrow-back" onPress={() => router.back()} />
           <View style={styles.topCopy}>
             <Text numberOfLines={1} style={styles.topTitle}>{recommendation.method.label}</Text>
-            <Text numberOfLines={1} style={styles.topSub}>Abrir {config.label}</Text>
+            <Text numberOfLines={1} style={styles.topSub}>{handoffPlan.confidenceLabel}</Text>
           </View>
           <SecondaryButton stretch={false} onPress={() => void handleOpen()}>
-            {config.verifiedDeepLink || config.androidPackage ? 'Abrir' : 'Buscar'}
+            {handoffPlan.primaryLabel.replace(/^Abrir\s|^Buscar\s/, '')}
           </SecondaryButton>
         </View>
       </Animated.View>
@@ -142,11 +145,20 @@ export default function DetailScreen() {
           Ranking actual: {settings.optimizationMode === 'max_savings' ? 'maximo ahorro neto' : 'pago mas rapido'}
         </Text>
 
+        <View style={styles.handoffCard}>
+          <Text style={styles.handoffTitle}>{handoffPlan.primaryLabel}</Text>
+          <Text style={styles.handoffText}>{handoffPlan.instruction}</Text>
+          <Text style={styles.handoffMeta}>
+            QR: {handoffPlan.supportsQrPayload ? 'handoff soportado' : 'manual'} - monto: {handoffPlan.supportsAmount ? 'handoff soportado' : 'manual'}
+          </Text>
+        </View>
+
         <RuleGrid
           items={[
             { icon: 'calendar-outline', label: 'Dias', value: formatDayPattern(recommendation.promo.day_pattern) },
             { icon: 'hourglass-outline', label: 'Vigencia', value: `${formatRuleDate(recommendation.promo.valid_from, 'sin inicio')} al ${formatRuleDate(recommendation.promo.valid_to, 'sin fin')}` },
             { icon: 'storefront-outline', label: 'Canal', value: formatChannel(recommendation.promo.channel) },
+            { icon: 'qr-code-outline', label: 'QR', value: currentSession.match.qr.payment_provider ?? currentSession.match.qr.qr_type },
             { icon: 'card-outline', label: 'Emisor', value: recommendation.promo.issuer },
             { icon: 'cash-outline', label: 'Tope', value: recommendation.promo.cap_amount_ars ? recommendation.promo.cap_amount_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin tope' },
             { icon: 'pricetag-outline', label: 'Minimo', value: recommendation.promo.min_purchase_ars ? recommendation.promo.min_purchase_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin minimo' },
@@ -285,6 +297,26 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   orderNote: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  handoffCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  handoffTitle: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  handoffText: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  handoffMeta: {
     ...typography.caption,
     color: colors.inkMuted,
   },

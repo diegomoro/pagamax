@@ -40,6 +40,35 @@ const santanderVisaCredit: PaymentMethodProfile = {
   cardType: 'credit',
 };
 
+const userMethods: PaymentMethodProfile[] = [
+  {
+    id: 'naranjax-balance-qr',
+    provider: 'naranjax',
+    label: 'Naranja X',
+    rail: 'qr',
+    walletLabel: 'Naranja X',
+    cardType: 'account_money',
+  },
+  {
+    id: 'bbva-mastercard-black-qr',
+    provider: 'bbva',
+    label: 'BBVA Mastercard Black',
+    rail: 'qr',
+    walletLabel: 'BBVA',
+    cardBrand: 'Mastercard',
+    cardType: 'credit',
+  },
+  {
+    id: 'mercadopago-balance-qr',
+    provider: 'mercadopago',
+    label: 'Mercado Pago',
+    rail: 'qr',
+    walletLabel: 'Mercado Pago',
+    cardType: 'account_money',
+    isDefault: true,
+  },
+];
+
 describe('recommendPaymentOptions', () => {
   it('caps percent-based promos using the purchase amount', () => {
     const candidates: PromoCandidate[] = [
@@ -145,5 +174,45 @@ describe('recommendPaymentOptions', () => {
     expect(result[0]!.valueType).toBe('financing_estimate');
     expect(result[0]!.estimatedSavingsArs).toBeGreaterThan(0);
     expect(result[0]!.warnings[0]).toContain('Installment value');
+  });
+
+  it('ranks the user payment app with the best expected savings', () => {
+    const candidates: PromoCandidate[] = [
+      {
+        source: 'merchant',
+        promo: makePromo({
+          promo_key: 'mp-carrefour',
+          issuer: 'mercadopago',
+          merchant_name: 'Carrefour',
+          promo_title: '10% Carrefour con Mercado Pago',
+          discount_percent: 10,
+          wallet_scope: 'Mercado Pago',
+          card_brand_scope: 'any',
+          card_type_scope: 'any',
+        }),
+      },
+      {
+        source: 'merchant',
+        promo: makePromo({
+          promo_key: 'nx-carrefour',
+          issuer: 'naranjax',
+          merchant_name: 'Carrefour',
+          promo_title: '25% Carrefour con Naranja X',
+          discount_percent: 25,
+          wallet_scope: 'Naranja X',
+          card_brand_scope: 'any',
+          card_type_scope: 'any',
+        }),
+      },
+    ];
+
+    const result = recommendPaymentOptions({
+      amountArs: 40000,
+      methods: userMethods,
+      candidates,
+    });
+
+    expect(result[0]!.method.provider).toBe('naranjax');
+    expect(result[0]!.estimatedSavingsArs).toBe(5000);
   });
 });

@@ -17,7 +17,7 @@ function triggerHaptic(effect: Promise<void>): void {
 }
 
 export default function ScanScreen() {
-  const { prepareScan, runPendingScanRecommendation, settings } = usePagamax();
+  const { runScanRecommendation, settings } = usePagamax();
   const [permission, requestPermission] = useCameraPermissions();
   const [locked, setLocked] = useState(false);
   const [pasteValue, setPasteValue] = useState('');
@@ -27,11 +27,10 @@ export default function ScanScreen() {
 
   const continueWithPayload = async (payload: string) => {
     try {
-      const match = prepareScan(payload);
+      runScanRecommendation(payload);
       setLocked(true);
       setFeedback('success');
       triggerHaptic(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
-      runPendingScanRecommendation(match.qr.amount_ars ?? undefined);
       router.replace('/results');
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo interpretar el QR.';
