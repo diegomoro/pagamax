@@ -103,10 +103,11 @@ function extractCuit(tlv: EmvTlv): string | null {
 }
 
 function inferPaymentProvider(paymentNetworks: EmvTlv[]): string | null {
-  const raw = paymentNetworks
-    .flatMap(network => [network.value, ...(network.children ?? []).map(child => child.value)])
-    .join(' ')
-    .toLowerCase();
+  const values = paymentNetworks.flatMap(network => [
+    network.value,
+    ...(network.children ?? []).map(child => child.value),
+  ]);
+  const raw = values.join(' ').toLowerCase();
 
   if (!raw) return null;
   if (raw.includes('mercadopago') || raw.includes('mercado pago')) return 'mercadopago';
@@ -114,7 +115,12 @@ function inferPaymentProvider(paymentNetworks: EmvTlv[]): string | null {
   if (raw.includes('naranja')) return 'naranjax';
   if (raw.includes('prisma')) return 'prisma';
   if (raw.includes('coelsa')) return 'coelsa';
-  return null;
+
+  const domainHint = values
+    .map(value => value.trim().toLowerCase())
+    .find(value => /^[a-z0-9.-]+\.[a-z]{2,}(?:\.[a-z]{2,})?$/.test(value));
+
+  return domainHint ?? null;
 }
 
 function inferQrType(pointOfInitiation: string | null): ParsedQr['qrType'] {

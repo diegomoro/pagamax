@@ -10,10 +10,11 @@ import { usePagamax } from '@/context/pagamax-context';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
 export default function SuccessScreen() {
-  const params = useLocalSearchParams<{ index?: string }>();
+  const params = useLocalSearchParams<{ index?: string; simulated?: string }>();
   const { activity, currentSession, recordSuccessfulRecommendation, settings, toggleSavedMerchant } = usePagamax();
   const hasRecorded = useRef(false);
   const [recordedId, setRecordedId] = useState<string | null>(null);
+  const isSimulated = params.simulated === '1';
 
   useEffect(() => {
     if (hasRecorded.current) return;
@@ -46,9 +47,17 @@ export default function SuccessScreen() {
     <View style={styles.screen}>
       <ScreenScroll contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Text style={styles.kicker}>Pago optimizado</Text>
-          <Text style={styles.title}>Paga Menos encontro una ruta clara para {currentSession.match.merchant_name}</Text>
-          <Text style={styles.subtitle}>Tu decision queda explicada y registrada para que la proxima vez entres mas rapido.</Text>
+          <Text style={styles.kicker}>{isSimulated ? 'Pago simulado' : 'Pago optimizado'}</Text>
+          <Text style={styles.title}>
+            {isSimulated
+              ? `Flujo revisado para ${currentSession.match.merchant_name}`
+              : `Paga Menos encontro una ruta clara para ${currentSession.match.merchant_name}`}
+          </Text>
+          <Text style={styles.subtitle}>
+            {isSimulated
+              ? 'No confirma pagos reales. Registra el resultado para validar ahorro, historial y reuso.'
+              : 'Tu decision queda explicada y registrada para que la proxima vez entres mas rapido.'}
+          </Text>
         </View>
 
         <RecommendationBreakdown

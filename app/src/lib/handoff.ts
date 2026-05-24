@@ -18,8 +18,10 @@ export interface PaymentHandoffPlan {
   confidenceLabel: 'high confidence' | 'estimated' | 'manual verification needed';
   supportsQrPayload: boolean;
   supportsAmount: boolean;
+  needsManualQrScan: boolean;
   instruction: string;
   detail: string;
+  returnInstruction: string;
 }
 
 function formatArs(value: number | undefined): string {
@@ -35,6 +37,7 @@ export function buildPaymentHandoffPlan(
   const amount = session.amountEstimated ? undefined : session.amountArs;
   const merchant = session.match.merchant_name || session.merchantInput || 'comercio detectado';
   const hasUsefulDiscount = recommendation.valueType !== 'fallback' && recommendation.estimatedSavingsArs > 0;
+  const needsManualQrScan = !config.canReceiveQrPayload;
   const confidenceLabel = config.canReceiveQrPayload
     ? 'high confidence'
     : config.canDeepLinkToPaymentFlow
@@ -52,10 +55,12 @@ export function buildPaymentHandoffPlan(
     confidenceLabel,
     supportsQrPayload: config.canReceiveQrPayload,
     supportsAmount: config.canReceiveAmount,
-    instruction: config.canReceiveQrPayload
+    needsManualQrScan,
+    instruction: !needsManualQrScan
       ? `Se abrira ${config.label} con el QR detectado. Revisa antes de confirmar.`
-      : `Se abrira ${config.label}. Paga a ${merchant} por ${formatArs(amount)} y confirma solo dentro de la app.`,
+      : `Se abrira ${config.label}. Abri el scanner QR en esa app y paga a ${merchant} por ${formatArs(amount)}. Confirma solo dentro de ${config.label}.`,
     detail: `${routeCopy} ${config.fallbackBehavior}`,
+    returnInstruction: `Al volver, podes cerrar el flujo de prueba en Paga Menos sin confirmar ningun pago real.`,
   };
 }
 

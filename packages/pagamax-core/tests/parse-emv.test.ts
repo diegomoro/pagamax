@@ -26,4 +26,11 @@ describe('parseQr', () => {
     expect(parsed.qrType).toBe('dynamic');
     expect(parsed.amountArs).toBe(12345);
   });
+
+  it('keeps unrecognized payment network domains as provider hints', () => {
+    const parsed = parseQr('00020101021141370014com.adquirente0115info_adquirente5017001300091234567895204970053030325802AR5909FULL NAME6010CITY LEGAL6304FFFF');
+
+    expect(parsed.paymentProvider).toBe('com.adquirente');
+    expect(parsed.merchantName).toBe('FULL NAME');
+  });
 });

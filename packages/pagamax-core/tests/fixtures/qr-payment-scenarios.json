@@ -1,0 +1,218 @@
+[
+  {
+    "id": "repo-carrefour-mercadopago-amount",
+    "merchantName": "Carrefour",
+    "payload": "00020101021226270011mercadopago010812345678520454115802AR5909Carrefour6004CABA5405123456304FFFF",
+    "qrType": "dynamic",
+    "provider": "mercadopago",
+    "amountArs": 12345,
+    "expectedParsed": {
+      "merchantName": "Carrefour",
+      "paymentProvider": "mercadopago",
+      "amountArs": 12345,
+      "qrType": "dynamic"
+    },
+    "expectedRecommendedMethod": "best_available_discount",
+    "expectedHandoffBehavior": "Open selected installed payment app; manual QR scanner fallback unless the app exposes a verified handoff contract.",
+    "source": "repo_fixture",
+    "notes": "Existing test payload used for parser, recommendation, and handoff smoke tests."
+  },
+  {
+    "id": "repo-carrefour-no-amount",
+    "merchantName": "Carrefour",
+    "payload": "000201010211520454115802AR5909Carrefour6004CABA6304FFFF",
+    "qrType": "static",
+    "provider": null,
+    "amountArs": null,
+    "expectedParsed": {
+      "merchantName": "Carrefour",
+      "paymentProvider": null,
+      "amountArs": null,
+      "qrType": "static"
+    },
+    "expectedRecommendedMethod": "best_available_discount_estimated_amount",
+    "expectedHandoffBehavior": "Show estimated ranking and let the user adjust amount before opening the selected payment app.",
+    "source": "repo_fixture",
+    "notes": "Covers merchant detected but QR amount absent."
+  },
+  {
+    "id": "repo-unknown-merchant",
+    "merchantName": "Kiosco Prueba",
+    "payload": "000201010211520459995802AR5913Kiosco Prueba6004CABA5405100006304FFFF",
+    "qrType": "static",
+    "provider": null,
+    "amountArs": 10000,
+    "expectedParsed": {
+      "merchantName": "Kiosco Prueba",
+      "paymentProvider": null,
+      "amountArs": 10000,
+      "qrType": "static"
+    },
+    "expectedRecommendedMethod": "default_method_fallback",
+    "expectedHandoffBehavior": "Use configured default payment method when no useful discount is available.",
+    "source": "repo_fixture",
+    "notes": "Covers fallback ranking and unknown merchant copy."
+  },
+  {
+    "id": "carrefour-mp-manufactured",
+    "merchantName": "Carrefour",
+    "payload": "00020101021241360015com.mercadopago0113CARREFOUR-00150150011305885267055204541153030325802AR5909Carrefour6004CABA5405123456304FFFF",
+    "qrType": "dynamic",
+    "provider": "mercadopago",
+    "amountArs": 12345,
+    "expectedParsed": {
+      "merchantName": "Carrefour",
+      "paymentProvider": "mercadopago",
+      "amountArs": 12345,
+      "qrType": "dynamic"
+    },
+    "expectedRecommendedMethod": "best_available_discount",
+    "expectedHandoffBehavior": "Open selected installed payment app; manual QR scanner fallback.",
+    "source": "manufactured_emvco_transferencias_3_format",
+    "notes": "Manufactured EMVCo-like payload shaped from Transferencias 3.0 merchant-presented fields; CRC is a parser-test placeholder."
+  },
+  {
+    "id": "coto-modo-manufactured",
+    "merchantName": "Coto",
+    "payload": "00020101021241270011ar.com.modo0108COTO-00250150011306548833425204541153030325802AR5904Coto6004CABA5405287506304FFFF",
+    "qrType": "dynamic",
+    "provider": "modo",
+    "amountArs": 28750,
+    "expectedParsed": {
+      "merchantName": "Coto",
+      "paymentProvider": "modo",
+      "amountArs": 28750,
+      "qrType": "dynamic"
+    },
+    "expectedRecommendedMethod": "best_available_discount",
+    "expectedHandoffBehavior": "Open selected wallet or bank app; do not synthesize MODO payment links.",
+    "source": "manufactured_emvco_transferencias_3_format",
+    "notes": "Covers MODO-compatible provider hint without claiming bank-specific link support."
+  },
+  {
+    "id": "ypf-prisma-manufactured",
+    "merchantName": "YPF",
+    "payload": "00020101021241250010com.prisma0107YPF-00350150011305466899795204554153030325802AR5903YPF6004CABA5405350006304FFFF",
+    "qrType": "dynamic",
+    "provider": "prisma",
+    "amountArs": 35000,
+    "expectedParsed": {
+      "merchantName": "YPF",
+      "paymentProvider": "prisma",
+      "amountArs": 35000,
+      "qrType": "dynamic"
+    },
+    "expectedRecommendedMethod": "best_available_discount",
+    "expectedHandoffBehavior": "Open selected installed payment app; manual QR scanner fallback.",
+    "source": "manufactured_emvco_transferencias_3_format",
+    "notes": "Covers fuel station context and Prisma provider hint."
+  },
+  {
+    "id": "farmacity-mp-no-amount-manufactured",
+    "merchantName": "Farmacity",
+    "payload": "00020101021141360015com.mercadopago0113FARMACITY-00450150011306571882905204591253030325802AR5909Farmacity6004CABA6304FFFF",
+    "qrType": "static",
+    "provider": "mercadopago",
+    "amountArs": null,
+    "expectedParsed": {
+      "merchantName": "Farmacity",
+      "paymentProvider": "mercadopago",
+      "amountArs": null,
+      "qrType": "static"
+    },
+    "expectedRecommendedMethod": "best_available_discount_estimated_amount",
+    "expectedHandoffBehavior": "Show estimated amount state and keep merchant visible for manual payment.",
+    "source": "manufactured_emvco_transferencias_3_format",
+    "notes": "Covers common pharmacy context with no QR amount."
+  },
+  {
+    "id": "dia-naranjax-manufactured",
+    "merchantName": "DIA",
+    "payload": "00020101021241270012com.naranjax0107DIA-00550150011306812543215204541153030325802AR5903DIA6004CABA540498006304FFFF",
+    "qrType": "dynamic",
+    "provider": "naranjax",
+    "amountArs": 9800,
+    "expectedParsed": {
+      "merchantName": "DIA",
+      "paymentProvider": "naranjax",
+      "amountArs": 9800,
+      "qrType": "dynamic"
+    },
+    "expectedRecommendedMethod": "best_available_discount",
+    "expectedHandoffBehavior": "Open selected installed payment app; manual QR scanner fallback.",
+    "source": "manufactured_emvco_transferencias_3_format",
+    "notes": "Covers discount supermarket context and Naranja X provider hint."
+  },
+  {
+    "id": "jumbo-coelsa-no-amount-manufactured",
+    "merchantName": "Jumbo",
+    "payload": "00020101021141300013ar.com.coelsa0109JUMBO-00650150011305903607635204541153030325802AR5905Jumbo6004CABA6304FFFF",
+    "qrType": "static",
+    "provider": "coelsa",
+    "amountArs": null,
+    "expectedParsed": {
+      "merchantName": "Jumbo",
+      "paymentProvider": "coelsa",
+      "amountArs": null,
+      "qrType": "static"
+    },
+    "expectedRecommendedMethod": "best_available_discount_estimated_amount",
+    "expectedHandoffBehavior": "Manual QR scanner fallback with estimated amount copy.",
+    "source": "manufactured_emvco_transferencias_3_format",
+    "notes": "Covers generic interoperable rail hint."
+  },
+  {
+    "id": "disco-modo-manufactured",
+    "merchantName": "Disco",
+    "payload": "00020101021241280011ar.com.modo0109DISCO-00750150011305903607635204541153030325802AR5905Disco6004CABA5405184006304FFFF",
+    "qrType": "dynamic",
+    "provider": "modo",
+    "amountArs": 18400,
+    "expectedParsed": {
+      "merchantName": "Disco",
+      "paymentProvider": "modo",
+      "amountArs": 18400,
+      "qrType": "dynamic"
+    },
+    "expectedRecommendedMethod": "best_available_discount",
+    "expectedHandoffBehavior": "Open selected installed payment app; manual QR scanner fallback.",
+    "source": "manufactured_emvco_transferencias_3_format",
+    "notes": "Covers Disco/Vea/Jumbo group merchant context."
+  },
+  {
+    "id": "vea-mp-manufactured",
+    "merchantName": "Vea",
+    "payload": "00020101021241300015com.mercadopago0107VEA-00850150011305903607635204541153030325802AR5903Vea6004CABA5405221006304FFFF",
+    "qrType": "dynamic",
+    "provider": "mercadopago",
+    "amountArs": 22100,
+    "expectedParsed": {
+      "merchantName": "Vea",
+      "paymentProvider": "mercadopago",
+      "amountArs": 22100,
+      "qrType": "dynamic"
+    },
+    "expectedRecommendedMethod": "best_available_discount",
+    "expectedHandoffBehavior": "Open selected installed payment app; manual QR scanner fallback.",
+    "source": "manufactured_emvco_transferencias_3_format",
+    "notes": "Covers Vea merchant context."
+  },
+  {
+    "id": "generic-transferencias-3-adquirente",
+    "merchantName": "FULL NAME",
+    "payload": "00020101021141370014com.adquirente0115info_adquirente5017001300091234567895204970053030325802AR5909FULL NAME6010CITY LEGAL6304FFFF",
+    "qrType": "static",
+    "provider": "com.adquirente",
+    "amountArs": null,
+    "expectedParsed": {
+      "merchantName": "FULL NAME",
+      "paymentProvider": "com.adquirente",
+      "amountArs": null,
+      "qrType": "static"
+    },
+    "expectedRecommendedMethod": "default_method_fallback",
+    "expectedHandoffBehavior": "Use default method fallback; provider is a domain hint only.",
+    "source": "official_format_example",
+    "notes": "Generic Transferencias 3.0-style merchant-presented payload; validates domain provider fallback without claiming app support."
+  }
+]

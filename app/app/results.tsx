@@ -30,6 +30,7 @@ function formatQrMeta(session: RecommendationSession): string | null {
 export default function ResultsScreen() {
   const { currentSession, dataTimestamp, loading, recordHandoff, settings } = usePagamax();
   const [showAlternatives, setShowAlternatives] = useState(false);
+  const [handoffStarted, setHandoffStarted] = useState(false);
   const insets = useSafeAreaInsets();
 
   if (loading) {
@@ -61,6 +62,7 @@ export default function ResultsScreen() {
         qrPayload: currentSession.qrPayload,
       });
       recordHandoff(hero.method.provider, mode, handoffPlan.detail);
+      setHandoffStarted(true);
       if (mode === 'store') {
         Alert.alert('Se abrio Google Play', `No se pudo abrir ${handoffPlan.label} en este telefono.`);
       }
@@ -125,6 +127,21 @@ export default function ResultsScreen() {
               />
             ) : null}
 
+            {handoffStarted && handoffPlan ? (
+              <View style={styles.returnPanel}>
+                <View style={styles.returnCopy}>
+                  <Text style={styles.returnTitle}>Cuando vuelvas</Text>
+                  <Text style={styles.returnBody}>{handoffPlan.returnInstruction}</Text>
+                </View>
+                <Pressable
+                  style={styles.returnButton}
+                  onPress={() => router.push({ pathname: '/success', params: { index: '0', simulated: '1' } })}
+                >
+                  <Text style={styles.returnButtonText}>Simular pago confirmado</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
             {settings.debugEnabled ? (
               <InlineNotice
                 title="Debug"
@@ -162,8 +179,8 @@ export default function ResultsScreen() {
             <Pressable onPress={() => router.replace('/scan')}>
               <Text style={styles.footerLink}>Escanear otro QR</Text>
             </Pressable>
-            <Pressable onPress={() => router.push({ pathname: '/success', params: { index: '0' } })}>
-              <Text style={styles.footerLink}>Marcar ahorro</Text>
+            <Pressable onPress={() => router.push({ pathname: '/success', params: { index: '0', simulated: '1' } })}>
+              <Text style={styles.footerLink}>Simular cierre</Text>
             </Pressable>
           </View>
         }
@@ -242,6 +259,38 @@ const styles = StyleSheet.create({
   alternativesAction: {
     ...typography.headingSm,
     color: colors.accentPressed,
+  },
+  returnPanel: {
+    borderRadius: spacing.md,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  returnCopy: {
+    gap: spacing.xxs,
+  },
+  returnTitle: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  returnBody: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  returnButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    borderRadius: spacing.sm,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.md,
+  },
+  returnButtonText: {
+    ...typography.headingSm,
+    color: colors.white,
+    textAlign: 'center',
   },
   footerLinks: {
     flexDirection: 'row',
