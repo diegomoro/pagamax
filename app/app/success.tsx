@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Share, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { DEMO_ACTIVITY } from '@/lib/demo-data';
 import { buildRecommendationPresentation, summarizeActivity } from '@/lib/experience';
@@ -42,6 +42,19 @@ export default function SuccessScreen() {
   const summary = summarizeActivity(history);
   const alreadySaved = settings.savedMerchants.includes(currentSession.match.merchant_name);
   const presentation = buildRecommendationPresentation(currentSession, recommendation);
+  const shareRecommendation = async () => {
+    const value = presentation.netSavingsArs > 0
+      ? `me marco una ruta con ahorro estimado de ${presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}`
+      : 'me confirmo la ruta mas simple sin promo confiable';
+
+    try {
+      await Share.share({
+        message: `Antes de pagar en ${currentSession.match.merchant_name}, Paga Menos ${value}. Es una forma tranquila de elegir mejor como pagar.`,
+      });
+    } catch {
+      // Sharing is optional and should not block the success flow.
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -92,6 +105,10 @@ export default function SuccessScreen() {
 
         <SecondaryButton onPress={() => toggleSavedMerchant(currentSession.match.merchant_name)}>
           {alreadySaved ? 'Quitar de accesos rapidos' : 'Guardar comercio para reuso rapido'}
+        </SecondaryButton>
+
+        <SecondaryButton onPress={() => void shareRecommendation()}>
+          Compartir con alguien
         </SecondaryButton>
 
         {recordedId ? <Text style={styles.recorded}>Guardado en tu actividad reciente.</Text> : null}

@@ -84,6 +84,8 @@ export default function ScanScreen() {
       </View>
 
       <View style={styles.bottomCard}>
+        <Text style={styles.scanHint}>Apunta al QR. Te damos la ruta en segundos.</Text>
+
         <Pressable hitSlop={12} onPress={() => router.replace('/manual')}>
           <Text style={styles.bottomLink}>No ves el QR? Busca el comercio</Text>
         </Pressable>
@@ -152,6 +154,11 @@ const styles = StyleSheet.create({
   bottomLink: {
     ...typography.headingSm,
     color: colors.ink,
+    textAlign: 'center',
+  },
+  scanHint: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
     textAlign: 'center',
   },
   debugToggle: {

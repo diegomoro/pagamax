@@ -97,9 +97,14 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
         <Pill label={valueTypeLabel(recommendation.valueType)} tone="accent" />
       </View>
 
+      <View style={styles.decisionRow}>
+        <Text style={styles.decisionLabel}>Mejor ruta para este pago</Text>
+        <Pill label={`Confianza ${confidence.label}`} tone={confidence.tone === 'success' ? 'success' : confidence.tone === 'warning' ? 'warning' : 'default'} />
+      </View>
+
       <View style={styles.heroValueWrap}>
-        <Text style={styles.heroValue}>{isFallback ? 'Sin promo confirmada' : formatArs(displayValue)}</Text>
-        <Text style={styles.heroCaption}>{isFallback ? 'Usa esta ruta y revisa beneficios antes de confirmar' : 'Te queda despues del fee'}</Text>
+        <Text style={styles.heroValue}>{isFallback ? 'Ruta por defecto' : formatArs(displayValue)}</Text>
+        <Text style={styles.heroCaption}>{isFallback ? 'No vimos descuento confiable. Paga simple y revisa antes de confirmar.' : 'Ahorro neto estimado para vos'}</Text>
       </View>
 
       {isFallback ? null : (
@@ -119,7 +124,7 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
       </View>
 
       <Text style={styles.heroTrust}>
-        {isFallback ? `No hay ahorro confirmado en datos vigentes al ${dataDateLabel}` : `Ahorro estimado con reglas vigentes al ${dataDateLabel}`}
+        {isFallback ? `Datos revisados al ${dataDateLabel}. Sin promo confiable para este comercio.` : `Estimado con reglas vigentes al ${dataDateLabel}. Revisa la app antes de confirmar.`}
       </Text>
 
       <View style={styles.heroActions}>
@@ -200,6 +205,17 @@ const styles = StyleSheet.create({
   },
   heroValueWrap: {
     gap: spacing.xxs,
+  },
+  decisionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  decisionLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    flex: 1,
   },
   heroValue: {
     ...typography.displayLg,

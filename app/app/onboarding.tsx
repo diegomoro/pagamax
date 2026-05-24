@@ -30,9 +30,9 @@ export default function OnboardingScreen() {
         <Text style={styles.title}>{current.title}</Text>
         <Text style={styles.body}>{current.body}</Text>
         <View style={styles.benefits}>
-          <Chip label="Ahorro bruto claro" selected />
-          <Chip label="Fee visible" selected />
-          <Chip label="Confianza y caveats" selected />
+          <Chip label="Escanear antes de pagar" selected />
+          <Chip label="Mejor ruta primero" selected />
+          <Chip label="Pago siempre confirmado por vos" selected />
         </View>
       </Card>
 
@@ -42,20 +42,22 @@ export default function OnboardingScreen() {
         <Chip label="Link de pago" selected={step === 2} />
       </View>
 
-      <Card style={styles.permissions}>
-        <ToggleRow
-          title="Ahorro cercano"
-          body="Activa sugerencias cercanas cuando te convenga. Pediremos permiso real solo cuando haga falta."
-          value={settings.locationInsightsEnabled}
-          onValueChange={(value) => updateSettings({ locationInsightsEnabled: value })}
-        />
-        <ToggleRow
-          title="Alertas de alto valor"
-          body="Avisos solo si superan tu umbral y pueden ahorrarte tiempo o dinero real."
-          value={settings.notificationsEnabled}
-          onValueChange={(value) => updateSettings({ notificationsEnabled: value })}
-        />
-      </Card>
+      {step === ONBOARDING_PAGES.length - 1 ? (
+        <Card style={styles.permissions}>
+          <ToggleRow
+            title="Ahorro cercano"
+            body="Sugerencias utiles cuando estes por comprar. Opcional."
+            value={settings.locationInsightsEnabled}
+            onValueChange={(value) => updateSettings({ locationInsightsEnabled: value })}
+          />
+          <ToggleRow
+            title="Alertas de alto valor"
+            body="Solo si la oportunidad puede valer la pena."
+            value={settings.notificationsEnabled}
+            onValueChange={(value) => updateSettings({ notificationsEnabled: value })}
+          />
+        </Card>
+      ) : null}
 
       <View style={styles.footer}>
         {step < ONBOARDING_PAGES.length - 1 ? (
@@ -65,7 +67,7 @@ export default function OnboardingScreen() {
           </>
         ) : (
           <>
-            <PrimaryButton onPress={finish}>Empezar a usar Paga Menos</PrimaryButton>
+            <PrimaryButton onPress={finish}>Escanear mi primer QR</PrimaryButton>
             <SecondaryButton onPress={() => setStep((prev) => Math.max(0, prev - 1))}>Atras</SecondaryButton>
           </>
         )}

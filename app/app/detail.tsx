@@ -49,6 +49,12 @@ function formatChannel(raw: string | null | undefined) {
   return raw;
 }
 
+function formatHandoffConfidence(label: ReturnType<typeof buildPaymentHandoffPlan>['confidenceLabel']): string {
+  if (label === 'high confidence') return 'Confianza alta';
+  if (label === 'estimated') return 'Estimado';
+  return 'Verificacion manual';
+}
+
 export default function DetailScreen() {
   const { currentSession, recordHandoff, settings } = usePagamax();
   const params = useLocalSearchParams<{ index?: string }>();
@@ -101,7 +107,7 @@ export default function DetailScreen() {
           <IconButton icon="arrow-back" onPress={() => router.back()} />
           <View style={styles.topCopy}>
             <Text numberOfLines={1} style={styles.topTitle}>{recommendation.method.label}</Text>
-            <Text numberOfLines={1} style={styles.topSub}>{handoffPlan.confidenceLabel}</Text>
+            <Text numberOfLines={1} style={styles.topSub}>{formatHandoffConfidence(handoffPlan.confidenceLabel)}</Text>
           </View>
           <SecondaryButton stretch={false} onPress={() => void handleOpen()}>
             {handoffPlan.primaryLabel.replace(/^Abrir\s|^Buscar\s/, '')}
@@ -124,8 +130,8 @@ export default function DetailScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.value}>{recommendation.valueType === 'fallback' ? 'Sin promo confirmada' : presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
-          <Text style={styles.caption}>{recommendation.valueType === 'fallback' ? 'Ruta disponible para pagar y revisar beneficios en la billetera' : 'Te queda despues del fee'}</Text>
+          <Text style={styles.value}>{recommendation.valueType === 'fallback' ? 'Ruta por defecto' : presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
+          <Text style={styles.caption}>{recommendation.valueType === 'fallback' ? 'No vimos descuento confiable. Paga simple y revisa antes de confirmar.' : 'Ahorro neto estimado para vos'}</Text>
           <Text style={styles.net}>Ruta sugerida: {recommendation.method.label}</Text>
           <View style={styles.pills}>
             <Pill label={recommendation.valueType === 'cashback' ? 'Reintegro' : recommendation.valueType === 'financing_estimate' ? 'Cuotas' : recommendation.valueType === 'fallback' ? 'Ruta disponible' : 'Descuento'} tone="accent" />

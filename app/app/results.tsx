@@ -27,6 +27,12 @@ function formatQrMeta(session: RecommendationSession): string | null {
   return parts.length > 0 ? parts.join(' - ') : null;
 }
 
+function formatHandoffConfidence(label: NonNullable<ReturnType<typeof buildPaymentHandoffPlan>>['confidenceLabel']): string {
+  if (label === 'high confidence') return 'Confianza alta';
+  if (label === 'estimated') return 'Estimado';
+  return 'Verificacion manual';
+}
+
 export default function ResultsScreen() {
   const { currentSession, dataTimestamp, loading, recordHandoff, settings } = usePagamax();
   const [showAlternatives, setShowAlternatives] = useState(false);
@@ -122,7 +128,7 @@ export default function ResultsScreen() {
 
             {handoffPlan ? (
               <InlineNotice
-                title={handoffPlan.confidenceLabel}
+                title={formatHandoffConfidence(handoffPlan.confidenceLabel)}
                 body={`${handoffPlan.instruction} ${handoffPlan.supportsQrPayload || handoffPlan.supportsAmount ? 'Puede recibir datos del QR.' : 'No envia QR ni monto automaticamente.'}`}
               />
             ) : null}
@@ -137,7 +143,7 @@ export default function ResultsScreen() {
                   style={styles.returnButton}
                   onPress={() => router.push({ pathname: '/success', params: { index: '0', simulated: '1' } })}
                 >
-                  <Text style={styles.returnButtonText}>Simular pago confirmado</Text>
+                  <Text style={styles.returnButtonText}>Ya volvi a Pagamax</Text>
                 </Pressable>
               </View>
             ) : null}
@@ -180,7 +186,7 @@ export default function ResultsScreen() {
               <Text style={styles.footerLink}>Escanear otro QR</Text>
             </Pressable>
             <Pressable onPress={() => router.push({ pathname: '/success', params: { index: '0', simulated: '1' } })}>
-              <Text style={styles.footerLink}>Simular cierre</Text>
+              <Text style={styles.footerLink}>Cerrar prueba</Text>
             </Pressable>
           </View>
         }
