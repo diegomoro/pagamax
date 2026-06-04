@@ -19,6 +19,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      MP_COOKIES_JSON: ${{ secrets.MP_COOKIES_JSON }}
 
     steps:
       - name: Checkout
@@ -37,13 +39,11 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Restore Mercado Pago cookies
-        if: ${{ secrets.MP_COOKIES_JSON != '' }}
+        if: ${{ env.MP_COOKIES_JSON != '' }}
         shell: bash
         run: |
           mkdir -p scraper/recon_out_mp
-          cat > scraper/recon_out_mp/recon-cookies.json <<'EOF'
-          ${{ secrets.MP_COOKIES_JSON }}
-          EOF
+          printf '%s' "$MP_COOKIES_JSON" > scraper/recon_out_mp/recon-cookies.json
 
       - name: Refresh promo data
         run: npm run data:refresh
