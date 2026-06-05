@@ -23,7 +23,7 @@
       "package": "com.pagamenos.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0f666a"
       },
       "permissions": [
         "android.permission.CAMERA"
