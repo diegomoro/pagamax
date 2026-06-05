@@ -21,6 +21,7 @@
     },
     "android": {
       "package": "com.pagamenos.app",
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f666a"
