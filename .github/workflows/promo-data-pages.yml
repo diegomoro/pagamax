@@ -36,7 +36,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: npm exec --workspace pagamax-scraper -- playwright install --with-deps chromium
 
       - name: Restore Mercado Pago cookies
         if: ${{ env.MP_COOKIES_JSON != '' }}
