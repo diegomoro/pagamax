@@ -9,7 +9,12 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "assetBundlePatterns": [
-      "**/*"
+      "assets/icon.png",
+      "assets/adaptive-icon.png",
+      "assets/splash-icon.png",
+      "assets/favicon.png",
+      "assets/data/promo-index.bundle.txt",
+      "assets/data/default-methods.json"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
