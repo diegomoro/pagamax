@@ -93,6 +93,41 @@ export default function RootLayout() {
               gestureEnabled: true,
             }}
           />
+          <Stack.Screen
+            name="privacy"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="terms"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="data-controls"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="delete-account"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="support"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
         </Stack>
       </PagamaxProvider>
     </SafeAreaProvider>

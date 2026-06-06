@@ -3,6 +3,7 @@ import {
   getMatchedCandidates,
   matchMerchantName,
   matchQr,
+  recommendPaymentOptions,
   recommendPagamaxRoutes,
   type MatchResult,
   type PaymentMethodProfile,
@@ -14,8 +15,18 @@ import { InteractionManager, Platform } from 'react-native';
 import { inferMerchantFromCheckoutUrl } from '@/lib/demo-data';
 import { buildActivityFromSession } from '@/lib/experience';
 import { buildMerchantOptions, loadDefaultMethods, loadInitialPromoIndex, syncRemotePromoIndex, type MerchantOption } from '@/lib/data';
+import { APP_VARIANT, KILL_SWITCH_ENABLED, OWNER_SPLIT_FLOW_ENABLED, PUBLIC_RECOMMENDATION_ONLY } from '@/config/public-build';
+import {
+  logoutBackendSession,
+  refreshBackendSession,
+  requestBackendAccountDeletion,
+  syncAccountWithBackend,
+  syncConsentState,
+  syncPaymentMethods,
+} from '@/lib/backend';
 import { STORAGE_KEYS } from '@/lib/storage';
 import type { HandoffOutcome } from '@/lib/handoff';
+import { amountBand, buildSessionTelemetryPayload, recordTelemetryEvent } from '@/lib/telemetry';
 import type {
   AppSettings,
   BetaAccount,
@@ -52,6 +63,7 @@ interface PagamaxContextValue {
   updateSettings: (patch: Partial<AppSettings>) => void;
   createAccount: (input: { email: string; displayName: string; phoneLabel?: string; inviteCode?: string }) => Promise<BetaAccount>;
   signOutAccount: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   completeOnboarding: (patch?: Partial<AppSettings>) => void;
   toggleSavedMerchant: (merchantName: string) => void;
   prepareScan: (payload: string) => MatchResult;
@@ -70,6 +82,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   onboardingCompleted: false,
   notificationsEnabled: false,
   locationInsightsEnabled: false,
+  analyticsEnabled: true,
+  merchantInsightsEnabled: true,
+  sponsoredOffersEnabled: true,
   alertThresholdArs: 2500,
   optimizationMode: 'max_savings',
   advancedMode: false,
@@ -193,6 +208,43 @@ function mergeSettings(base: AppSettings, patch: Partial<AppSettings>): AppSetti
       ? { ...base.surfacePreferences, ...patch.surfacePreferences }
       : base.surfacePreferences,
   };
+}
+
+function hydrateStoredAccount(storedAccountRaw: string | null): BetaAccount | null {
+  if (!storedAccountRaw) return null;
+  const parsed = JSON.parse(storedAccountRaw) as Partial<BetaAccount>;
+  if (!parsed.id || !parsed.email || !parsed.displayName || !parsed.createdAt || !parsed.updatedAt) return null;
+
+  return {
+    id: parsed.id,
+    email: parsed.email,
+    displayName: parsed.displayName,
+    phoneLabel: parsed.phoneLabel,
+    inviteCode: parsed.inviteCode,
+    emailVerified: parsed.emailVerified ?? false,
+    authProvider: parsed.authProvider ?? 'email_magic_link',
+    deviceBoundAt: parsed.deviceBoundAt,
+    sessionExpiresAt: parsed.sessionExpiresAt,
+    createdAt: parsed.createdAt,
+    updatedAt: parsed.updatedAt,
+    syncStatus: parsed.syncStatus ?? 'local_only',
+  };
+}
+
+async function refreshStoredAccountSession(account: BetaAccount): Promise<BetaAccount> {
+  const result = await refreshBackendSession(account);
+  if (!result) return account;
+
+  const next: BetaAccount = {
+    ...account,
+    id: result.id,
+    syncStatus: result.syncStatus,
+    emailVerified: result.emailVerified ?? account.emailVerified,
+    updatedAt: new Date().toISOString(),
+  };
+  if (result.deviceBoundAt) next.deviceBoundAt = result.deviceBoundAt;
+  if (result.sessionExpiresAt) next.sessionExpiresAt = result.sessionExpiresAt;
+  return next;
 }
 
 function buildFallbackRecommendations(
@@ -372,6 +424,11 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     } as const;
 
     appendDiagnostic('handoff', outcome === 'error' ? 'error' : 'info', messages[outcome], detail);
+    void recordTelemetryEvent(settings, account, 'handoff_started', {
+      provider,
+      outcome,
+      detail: detail ? detail.slice(0, 180) : null,
+    });
   }
 
   async function refreshData() {
@@ -404,10 +461,19 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
         : DEFAULT_SETTINGS;
       setSettings(hydratedSettings);
 
-      const hydratedAccount = storedAccountRaw
-        ? JSON.parse(storedAccountRaw) as BetaAccount
-        : null;
+      const hydratedAccount = hydrateStoredAccount(storedAccountRaw);
       setAccount(hydratedAccount);
+      if (hydratedAccount) {
+        void refreshStoredAccountSession(hydratedAccount)
+          .then((refreshedAccount) => {
+            setAccount(refreshedAccount);
+            void persistAccount(refreshedAccount);
+          })
+          .catch((caught: unknown) => {
+            const message = caught instanceof Error ? caught.message : 'No se pudo refrescar la sesion.';
+            appendDiagnostic('session', 'warning', 'Sesion pendiente de refresco', message);
+          });
+      }
 
       const hydratedActivity = storedActivityRaw
         ? JSON.parse(storedActivityRaw) as SavingsActivity[]
@@ -443,21 +509,30 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     metadata?: { qrPayload?: string; checkoutUrl?: string; amountEstimated?: boolean },
   ) {
     if (!promoIndex) throw new Error('Promo index is not loaded');
+    if (KILL_SWITCH_ENABLED) throw new Error('Paga Menos esta pausado temporalmente.');
 
-    const routePlan = recommendPagamaxRoutes({
-      amountArs,
-      ownerMethods: activeMethods,
-      customerMethods: activeMethods,
-      candidates: getMatchedCandidates(match),
-      topN: 5,
-    });
+    const candidates = getMatchedCandidates(match);
+    const routePlan = OWNER_SPLIT_FLOW_ENABLED
+      ? recommendPagamaxRoutes({
+          amountArs,
+          ownerMethods: activeMethods,
+          customerMethods: activeMethods,
+          candidates,
+          topN: 5,
+        })
+      : null;
 
-    let recommendations = routePlan.ownerRoute
+    let recommendations = routePlan?.ownerRoute
       ? [
           routePlan.ownerRoute.recommendation,
           ...routePlan.customerRecommendations.filter((recommendation) => recommendation.method.id !== routePlan.ownerRoute?.ownerMethod.id),
         ].slice(0, 5)
-      : routePlan.customerRecommendations;
+      : recommendPaymentOptions({
+          amountArs,
+          candidates,
+          methods: activeMethods.filter((method) => method.canPayMerchantQr !== false),
+          topN: 5,
+        });
 
     if (recommendations.length === 0) {
       recommendations = buildFallbackRecommendations(activeMethods, amountArs, merchantInput, 5);
@@ -472,16 +547,17 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
       checkoutUrl: metadata?.checkoutUrl,
       match,
       recommendations,
-      ownerRoute: routePlan.ownerRoute,
+      ownerRoute: OWNER_SPLIT_FLOW_ENABLED ? routePlan?.ownerRoute ?? null : null,
       createdAt: new Date().toISOString(),
     };
 
     setCurrentSession(session);
+    void recordTelemetryEvent(settings, account, 'session_created', buildSessionTelemetryPayload(session, recommendations));
     appendDiagnostic(
       'session',
       recommendations.length > 0 ? 'info' : 'warning',
       `Sesion ${source} creada para ${merchantInput}`,
-      `match=${match.match_method} opciones=${recommendations.length} owner_route=${routePlan.ownerRoute ? 'yes' : 'no'} estimated=${metadata?.amountEstimated ? 'yes' : 'no'}`,
+      `match=${match.match_method} opciones=${recommendations.length} public=${PUBLIC_RECOMMENDATION_ONLY ? 'yes' : 'no'} owner_route=${session.ownerRoute ? 'yes' : 'no'} estimated=${metadata?.amountEstimated ? 'yes' : 'no'}`,
     );
     return session;
   }
@@ -490,6 +566,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     setMethods((prev) => {
       const next = prev.map((method) => method.id === id ? { ...method, enabled: !method.enabled } : method);
       void persistMethods(next);
+      void syncPaymentMethods(account, next).catch(() => undefined);
       return next;
     });
   }
@@ -498,6 +575,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     setMethods((prev) => {
       const next = prev.map((method) => method.id === id ? { ...method, ...patch } : method);
       void persistMethods(next);
+      void syncPaymentMethods(account, next).catch(() => undefined);
       return next;
     });
   }
@@ -506,12 +584,27 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     const next = loadDefaultMethods().map(normalizeStoredMethod);
     setMethods(next);
     await persistMethods(next);
+    await syncPaymentMethods(account, next).catch(() => undefined);
   }
 
   function updateSettings(patch: Partial<AppSettings>) {
     setSettings((prev) => {
       const next = mergeSettings(prev, patch);
       void persistSettings(next);
+      void syncConsentState(account, next).catch(() => undefined);
+      if (
+        Object.prototype.hasOwnProperty.call(patch, 'analyticsEnabled')
+        || Object.prototype.hasOwnProperty.call(patch, 'merchantInsightsEnabled')
+        || Object.prototype.hasOwnProperty.call(patch, 'sponsoredOffersEnabled')
+        || Object.prototype.hasOwnProperty.call(patch, 'locationInsightsEnabled')
+      ) {
+        void recordTelemetryEvent(next, account, 'privacy_controls_updated', {
+          analyticsEnabled: next.analyticsEnabled,
+          merchantInsightsEnabled: next.merchantInsightsEnabled,
+          sponsoredOffersEnabled: next.sponsoredOffersEnabled,
+          regionInsightsEnabled: next.locationInsightsEnabled,
+        });
+      }
       return next;
     });
   }
@@ -520,30 +613,79 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     const email = normalizeEmail(input.email);
     const displayName = input.displayName.trim();
     const now = new Date().toISOString();
-    const next: BetaAccount = {
-      id: account?.id ?? makeAccountId(email),
+    const localId = account?.id ?? makeAccountId(email);
+    const backendResult = await syncAccountWithBackend({
       email,
       displayName,
+      phoneLabel: input.phoneLabel,
+      inviteCode: input.inviteCode,
+      localAccountId: localId,
+      appVariant: APP_VARIANT,
+    });
+
+    const next: BetaAccount = {
+      id: backendResult?.id ?? localId,
+      email,
+      displayName,
+      emailVerified: backendResult?.emailVerified ?? false,
+      authProvider: 'email_magic_link',
       createdAt: account?.createdAt ?? now,
       updatedAt: now,
-      syncStatus: 'local_only',
+      syncStatus: backendResult?.syncStatus ?? 'pending_backend',
     };
 
     const phoneLabel = input.phoneLabel?.trim();
     const inviteCode = input.inviteCode?.trim();
     if (phoneLabel) next.phoneLabel = phoneLabel;
     if (inviteCode) next.inviteCode = inviteCode;
+    if (backendResult?.deviceBoundAt) next.deviceBoundAt = backendResult.deviceBoundAt;
+    if (backendResult?.sessionExpiresAt) next.sessionExpiresAt = backendResult.sessionExpiresAt;
 
     setAccount(next);
     await persistAccount(next);
-    appendDiagnostic('session', 'info', account ? 'Cuenta beta actualizada' : 'Cuenta beta creada', `email=${email}`);
+    await Promise.allSettled([
+      syncConsentState(next, settings),
+      syncPaymentMethods(next, methods),
+    ]);
+    void recordTelemetryEvent(settings, next, 'account_synced', {
+      syncStatus: next.syncStatus,
+      hasInviteCode: Boolean(next.inviteCode),
+    });
+    appendDiagnostic('session', 'info', account ? 'Cuenta actualizada' : 'Cuenta creada', `sync=${next.syncStatus}`);
     return next;
   }
 
   async function signOutAccount() {
+    try {
+      await logoutBackendSession(account);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'No se pudo cerrar la sesion remota.';
+      appendDiagnostic('session', 'warning', 'Cierre remoto pendiente', message);
+    }
     setAccount(null);
     await AsyncStorage.removeItem(STORAGE_KEYS.account);
-    appendDiagnostic('session', 'info', 'Cuenta beta cerrada localmente');
+    appendDiagnostic('session', 'info', 'Sesion cerrada en este telefono');
+  }
+
+  async function deleteAccount() {
+    await requestBackendAccountDeletion(account);
+    await Promise.all([
+      AsyncStorage.removeItem(STORAGE_KEYS.account),
+      AsyncStorage.removeItem(STORAGE_KEYS.activity),
+      AsyncStorage.removeItem(STORAGE_KEYS.diagnostics),
+      AsyncStorage.removeItem(STORAGE_KEYS.methods),
+      AsyncStorage.removeItem(STORAGE_KEYS.settings),
+      AsyncStorage.removeItem(STORAGE_KEYS.telemetryQueue),
+    ]);
+
+    const resetMethodsState = loadDefaultMethods().map(normalizeStoredMethod);
+    setAccount(null);
+    setActivity([]);
+    setDiagnostics([]);
+    setMethods(resetMethodsState);
+    setSettings(DEFAULT_SETTINGS);
+    setCurrentSession(null);
+    setPendingScan(null);
   }
 
   function completeOnboarding(patch: Partial<AppSettings> = {}) {
@@ -650,6 +792,13 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
       return next;
     });
     appendDiagnostic('session', 'info', 'Recomendacion confirmada y guardada', `merchant=${item.merchantName} net=${item.netSavingsArs}`);
+    void recordTelemetryEvent(settings, account, 'decision_saved', {
+      merchantName: item.merchantName,
+      category: item.category,
+      amountBand: amountBand(item.amountArs),
+      provider: item.provider,
+      confidence: item.confidence.label,
+    });
     return item;
   }
 
@@ -678,6 +827,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     updateSettings,
     createAccount,
     signOutAccount,
+    deleteAccount,
     completeOnboarding,
     toggleSavedMerchant,
     prepareScan,

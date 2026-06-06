@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { ConfidenceBadge } from '@/components/confidence-badge';
 import { Card } from '@/components/ui';
+import { PUBLIC_RECOMMENDATION_ONLY } from '@/config/public-build';
 import { formatArs } from '@/lib/format';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 import type { ConfidenceInfo } from '@/types/app';
@@ -10,7 +11,7 @@ export function RecommendationBreakdown({
   pagamaxFeeArs,
   netSavingsArs,
   confidence,
-  hideFee = false,
+  hideFee = PUBLIC_RECOMMENDATION_ONLY,
 }: {
   grossSavingsArs: number;
   pagamaxFeeArs: number;

@@ -14,6 +14,10 @@ export interface BetaAccount {
   displayName: string;
   phoneLabel?: string;
   inviteCode?: string;
+  emailVerified: boolean;
+  authProvider: 'email_magic_link';
+  deviceBoundAt?: string;
+  sessionExpiresAt?: string;
   createdAt: string;
   updatedAt: string;
   syncStatus: 'local_only' | 'pending_backend' | 'synced';
@@ -31,6 +35,9 @@ export interface AppSettings {
   onboardingCompleted: boolean;
   notificationsEnabled: boolean;
   locationInsightsEnabled: boolean;
+  analyticsEnabled: boolean;
+  merchantInsightsEnabled: boolean;
+  sponsoredOffersEnabled: boolean;
   alertThresholdArs: number;
   optimizationMode: OptimizationMode;
   advancedMode: boolean;

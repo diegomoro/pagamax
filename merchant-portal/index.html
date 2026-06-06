@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Paga Menos Merchant Portal</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Public beta merchant portal</p>
+          <h1>Paga Menos demand and sponsored-offer console</h1>
+        </div>
+        <button type="button">Export aggregate report</button>
+      </header>
+
+      <section class="grid">
+        <article class="panel">
+          <p class="metric-label">Checkout intent</p>
+          <strong>18.4k</strong>
+          <span>Scans and manual searches this month</span>
+        </article>
+        <article class="panel">
+          <p class="metric-label">Recommendation share</p>
+          <strong>22%</strong>
+          <span>Organic or sponsored appearances</span>
+        </article>
+        <article class="panel">
+          <p class="metric-label">Handoff rate</p>
+          <strong>41%</strong>
+          <span>Users opening a wallet or bank app</span>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <div class="offer-editor">
+          <h2>Sponsored offer setup</h2>
+          <label>
+            Offer title
+            <input value="10% back on weekday grocery checkout">
+          </label>
+          <label>
+            Category
+            <select>
+              <option>Supermarket</option>
+              <option>Fuel</option>
+              <option>Pharmacy</option>
+              <option>Food</option>
+            </select>
+          </label>
+          <label>
+            Budget
+            <input value="ARS 250,000">
+          </label>
+          <p class="policy">Sponsored placement is labeled and cannot outrank a clearly better organic user outcome.</p>
+          <button type="button">Send for review</button>
+        </div>
+
+        <div class="table-panel">
+          <h2>Category demand</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Amount band</th>
+                <th>Exposures</th>
+                <th>Handoffs</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Supermarket</td>
+                <td>15k-49k</td>
+                <td>8,920</td>
+                <td>3,840</td>
+              </tr>
+              <tr>
+                <td>Fuel</td>
+                <td>50k-149k</td>
+                <td>3,410</td>
+                <td>1,120</td>
+              </tr>
+              <tr>
+                <td>Pharmacy</td>
+                <td>5k-14k</td>
+                <td>2,730</td>
+                <td>910</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

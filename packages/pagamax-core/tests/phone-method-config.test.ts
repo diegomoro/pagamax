@@ -9,24 +9,28 @@ const methodsPath = join(testsDir, '..', '..', '..', 'app', 'assets', 'data', 'd
 const methods = JSON.parse(readFileSync(methodsPath, 'utf8')) as PaymentMethodProfile[];
 
 describe('phone method config', () => {
-  it('contains the configured owner-phone payment methods and aliases', () => {
+  it('contains the public payment methods without bundled receiving aliases', () => {
     const byId = new Map(methods.map(method => [method.id, method]));
 
-    expect(byId.get('naranjax-balance-qr')?.receivingAlias).toBe('ddmoro.nx');
-    expect(byId.get('bbva-mastercard-black-qr')?.receivingAlias).toBe('diego.daniel.moro');
-    expect(byId.get('bbva-visa-signature-qr')?.receivingAlias).toBe('diego.daniel.moro');
-    expect(byId.get('bbva-debit-qr')?.receivingAlias).toBe('diego.daniel.moro');
-    expect(byId.get('mercadopago-balance-qr')?.receivingAlias).toBe('buceo.deseo.curso.mp');
-    expect(byId.get('personalpay-prepaid-qr')?.receivingAlias).toBe('dmoro17.ppay');
-    expect(byId.get('carrefour-bank-qr')?.receivingAlias).toBe('Paga.Menos.CF');
-    expect(byId.get('bna-plus-wallet-qr')?.receivingAlias).toBe('Paga.Menos.BNA');
+    expect(byId.get('naranjax-balance-qr')?.receivingAlias).toBeNull();
+    expect(byId.get('bbva-mastercard-black-qr')?.receivingAlias).toBeNull();
+    expect(byId.get('bbva-visa-signature-qr')?.receivingAlias).toBeNull();
+    expect(byId.get('bbva-debit-qr')?.receivingAlias).toBeNull();
+    expect(byId.get('mercadopago-balance-qr')?.receivingAlias).toBeNull();
+    expect(byId.get('personalpay-prepaid-qr')?.receivingAlias).toBeNull();
+    expect(byId.get('carrefour-bank-qr')?.receivingAlias).toBeNull();
+    expect(byId.get('bna-plus-wallet-qr')?.receivingAlias).toBeNull();
     expect(byId.get('ypf-app-wallet-qr')?.receivingAlias).toBeNull();
   });
 
-  it('does not mark a method as customer-transfer receivable without an alias', () => {
+  it('does not ship owner-phone receiving state in the public build', () => {
     for (const method of methods) {
-      if (method.canReceiveCustomerTransfer === false) continue;
-      expect(method.receivingAlias?.trim(), method.id).toBeTruthy();
+      expect(method.ownerPhone, method.id).toBe(false);
+      expect(method.canReceiveCustomerTransfer, method.id).toBe(false);
+      expect(method.receivingAlias, method.id).toBeNull();
+      expect(method.availableBalanceArs, method.id).toBeNull();
+      expect(method.qrTransferLimitRemainingArs, method.id).toBeNull();
+      expect(method.promoCapRemainingArs, method.id).toBeNull();
     }
   });
 });

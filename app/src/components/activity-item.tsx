@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ConfidenceBadge } from '@/components/confidence-badge';
+import { PUBLIC_RECOMMENDATION_ONLY } from '@/config/public-build';
 import { formatArs } from '@/lib/format';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 import type { SavingsActivity } from '@/types/app';
@@ -28,7 +29,7 @@ export function ActivityItem({
       </View>
       <View style={styles.breakdown}>
         <Text style={styles.breakdownText}>Ahorro bruto {formatArs(item.grossSavingsArs)}</Text>
-        <Text style={styles.breakdownText}>Fee Paga Menos {formatArs(item.pagamaxFeeArs)}</Text>
+        {PUBLIC_RECOMMENDATION_ONLY ? null : <Text style={styles.breakdownText}>Servicio Paga Menos {formatArs(item.pagamaxFeeArs)}</Text>}
       </View>
       <ConfidenceBadge confidence={item.confidence} />
     </Pressable>

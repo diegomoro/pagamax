@@ -98,6 +98,17 @@ export default function ProfileScreen() {
         )}
       </Card>
 
+      <SectionHeader title="Privacidad" subtitle="Control, documentos y soporte para Google Play." />
+      <Card style={styles.card}>
+        <View style={styles.buttonRow}>
+          <SecondaryButton stretch={false} onPress={() => router.push('/privacy')}>Privacidad</SecondaryButton>
+          <SecondaryButton stretch={false} onPress={() => router.push('/terms')}>Terminos</SecondaryButton>
+          <SecondaryButton stretch={false} onPress={() => router.push('/data-controls')}>Datos</SecondaryButton>
+          <SecondaryButton stretch={false} onPress={() => router.push('/support')}>Soporte</SecondaryButton>
+        </View>
+        <SecondaryButton onPress={() => router.push('/delete-account')}>Eliminar cuenta y datos</SecondaryButton>
+      </Card>
+
       <SectionHeader title="Como elegir" subtitle="Decidi si queres mas ahorro o menos vueltas." />
       <Card style={styles.card}>
         <View style={styles.chips}>

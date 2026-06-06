@@ -1,5 +1,5 @@
 import { Linking } from 'react-native';
-import { getPaymentAppConfig } from '@/config/payment-apps';
+import { getPaymentAppConfig, isAllowedAndroidPackage, isAllowedPaymentAppUrl } from '@/config/payment-apps';
 import type { RecommendationSession } from '@/types/app';
 import type { PaymentRecommendation } from '@pagamax/core';
 
@@ -37,9 +37,6 @@ export function buildPaymentHandoffPlan(
   const amount = session.amountEstimated ? undefined : session.amountArs;
   const merchant = session.match.merchant_name || session.merchantInput || 'comercio detectado';
   const hasUsefulDiscount = recommendation.valueType !== 'fallback' && recommendation.estimatedSavingsArs > 0;
-  const ownerRoute = session.ownerRoute && session.ownerRoute.recommendation.method.id === recommendation.method.id
-    ? session.ownerRoute
-    : null;
   const needsManualQrScan = !config.canReceiveQrPayload;
   const confidenceLabel = config.canReceiveQrPayload
     ? 'high confidence'
@@ -50,21 +47,6 @@ export function buildPaymentHandoffPlan(
   const routeCopy = hasUsefulDiscount
     ? `Elegida por ahorro estimado de ${formatArs(recommendation.estimatedSavingsArs)}.`
     : 'Sin descuento confirmado; usa tu metodo configurado por defecto.';
-
-  if (ownerRoute) {
-    return {
-      provider: config.provider,
-      label: config.label,
-      primaryLabel: `Abrir ${config.label}`,
-      confidenceLabel,
-      supportsQrPayload: config.canReceiveQrPayload,
-      supportsAmount: config.canReceiveAmount,
-      needsManualQrScan,
-      instruction: `Primero confirma que el cliente pago ${formatArs(ownerRoute.customerChargeArs)} a ${ownerRoute.payoutAlias}. Despues se abrira ${config.label} para pagar el QR de ${merchant} por ${formatArs(amount)}.`,
-      detail: `Cliente recibe ${formatArs(ownerRoute.customerDiscountShareArs)} de descuento y Pagamax captura ${formatArs(ownerRoute.ownerCaptureArs)}. ${routeCopy} ${config.fallbackBehavior}`,
-      returnInstruction: `Al volver, registra el pago solo si el cliente ya pago ${formatArs(ownerRoute.customerChargeArs)} a ${ownerRoute.payoutAlias} y vos confirmaste el QR en ${config.label}.`,
-    };
-  }
 
   return {
     provider: config.provider,
@@ -78,7 +60,7 @@ export function buildPaymentHandoffPlan(
       ? `Se abrira ${config.label} con el QR detectado. Revisa antes de confirmar.`
       : `Se abrira ${config.label}. Abri el scanner QR en esa app y paga a ${merchant} por ${formatArs(amount)}. Confirma solo dentro de ${config.label}.`,
     detail: `${routeCopy} ${config.fallbackBehavior}`,
-    returnInstruction: `Al volver, podes cerrar el flujo de prueba en Paga Menos sin confirmar ningun pago real.`,
+    returnInstruction: `Al volver, podes guardar la decision. Paga Menos no confirma ni registra pagos reales.`,
   };
 }
 
@@ -88,7 +70,7 @@ export async function openPaymentApp(
 ): Promise<HandoffOutcome> {
   const config = getPaymentAppConfig(provider);
 
-  if (config.paymentFlowUrl) {
+  if (config.paymentFlowUrl && isAllowedPaymentAppUrl(config.provider, config.paymentFlowUrl)) {
     try {
       await Linking.openURL(config.paymentFlowUrl);
       return 'payment_flow';
@@ -97,7 +79,7 @@ export async function openPaymentApp(
     }
   }
 
-  if (config.launchUrl) {
+  if (config.launchUrl && isAllowedPaymentAppUrl(config.provider, config.launchUrl)) {
     try {
       await Linking.openURL(config.launchUrl);
       return 'app';
@@ -106,13 +88,17 @@ export async function openPaymentApp(
     }
   }
 
-  if (config.androidPackage) {
+  if (config.androidPackage && isAllowedAndroidPackage(config.provider, config.androidPackage)) {
     try {
       await Linking.openURL(`intent://#Intent;package=${config.androidPackage};end`);
       return 'app';
     } catch {
       // Fall through to Play Store.
     }
+  }
+
+  if (!isAllowedPaymentAppUrl(config.provider, config.playStoreUrl)) {
+    throw new Error('Destino de pago no permitido.');
   }
 
   await Linking.openURL(config.playStoreUrl);

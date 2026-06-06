@@ -16,6 +16,18 @@ export interface PaymentAppConfig {
 
 const PLAY_SEARCH_BASE = 'https://play.google.com/store/search?q=';
 const PLAY_DETAILS_BASE = 'https://play.google.com/store/apps/details?id=';
+const TRUSTED_HTTPS_HOSTS = new Set(['play.google.com']);
+const ANDROID_PACKAGE_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+$/;
+
+const PROVIDER_ALLOWED_SCHEMES: Record<string, string[]> = {
+  mercadopago: ['mercadopago'],
+  personalpay: ['ar.com.personalpay'],
+  ypf: ['ypfjpm'],
+  shellbox: ['shellbox'],
+  carrefour_bank: ['com.carrefour.bancadeserviciosfinancieroscarrefour'],
+  bna: ['bnamas'],
+  bancon: ['bancor'],
+};
 
 function searchUrl(query: string): string {
   return `${PLAY_SEARCH_BASE}${encodeURIComponent(query)}&c=apps`;
@@ -220,4 +232,22 @@ export function getPaymentAppConfig(provider: string): PaymentAppConfig {
     fallbackBehavior: 'Open Google Play or search for the selected payment app.',
     validationNote: 'No app capability entry has been validated for this provider.',
   };
+}
+
+export function isAllowedPaymentAppUrl(provider: string, value: string): boolean {
+  try {
+    const url = new URL(value);
+    const protocol = url.protocol.replace(/:$/, '');
+    if (url.protocol === 'https:') {
+      return TRUSTED_HTTPS_HOSTS.has(url.hostname);
+    }
+    return PROVIDER_ALLOWED_SCHEMES[provider]?.includes(protocol) ?? false;
+  } catch {
+    return false;
+  }
+}
+
+export function isAllowedAndroidPackage(provider: string, androidPackage: string): boolean {
+  const expectedPackage = PAYMENT_APP_CONFIG[provider]?.androidPackage;
+  return expectedPackage === androidPackage && ANDROID_PACKAGE_PATTERN.test(androidPackage);
 }

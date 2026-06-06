@@ -1,0 +1,167 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f7f8;
+  color: #14201d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  background: #086b5c;
+  color: white;
+  font-weight: 700;
+  padding: 12px 16px;
+}
+
+.shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid #d8e1df;
+  padding-bottom: 24px;
+}
+
+.eyebrow,
+.metric-label {
+  margin: 0;
+  color: #667672;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1,
+h2 {
+  margin: 6px 0 0;
+  letter-spacing: 0;
+}
+
+h1 {
+  max-width: 720px;
+  font-size: 48px;
+  line-height: 1.02;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.panel,
+.offer-editor,
+.table-panel {
+  border: 1px solid #d8e1df;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 8px 24px rgba(20, 32, 29, 0.06);
+}
+
+.panel {
+  padding: 20px;
+}
+
+.panel strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 34px;
+}
+
+.panel span,
+.policy {
+  color: #667672;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 16px;
+}
+
+.offer-editor,
+.table-panel {
+  padding: 20px;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+  color: #33423f;
+  font-weight: 700;
+}
+
+input,
+select {
+  width: 100%;
+  border: 1px solid #c7d2cf;
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: #14201d;
+  background: white;
+}
+
+.policy {
+  border-left: 3px solid #d99a20;
+  padding-left: 12px;
+}
+
+table {
+  width: 100%;
+  margin-top: 16px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e5ecea;
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  color: #667672;
+  font-size: 13px;
+}
+
+@media (max-width: 780px) {
+  .topbar,
+  .workspace {
+    display: grid;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+}

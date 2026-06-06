@@ -13,6 +13,7 @@
     "data:refresh": "node ./scripts/run-daily-promo-refresh.mjs",
     "data:publish": "node ./scripts/build-remote-promo-site.mjs",
     "data:sync": "node ./scripts/sync-mobile-data.mjs",
+    "public:check": "node ./scripts/check-public-build.mjs",
     "core:test": "npm run test --workspace @pagamax/core",
     "core:build": "npm run build --workspace @pagamax/core"
   },

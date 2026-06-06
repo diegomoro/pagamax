@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -11,8 +11,6 @@ import { usePagamax } from '@/context/pagamax-context';
 import { formatArs } from '@/lib/format';
 import { summarizeActivity } from '@/lib/experience';
 import { colors, radius, shadows, spacing, typography } from '@/lib/theme';
-
-const PRIVACY_POLICY_URL = 'https://github.com/diegomoro/pagamax/blob/main/app/PRIVACY_POLICY.md';
 
 export default function HomeScreen() {
   const {
@@ -271,7 +269,7 @@ export default function HomeScreen() {
           onValueChange={(value) => updateSettings({ optimizationMode: value ? 'fastest_checkout' : 'max_savings' })}
         />
         <SecondaryButton onPress={() => router.push('/profile')}>Abrir preferencias</SecondaryButton>
-        <SecondaryButton onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>Politica de privacidad</SecondaryButton>
+        <SecondaryButton onPress={() => router.push('/privacy')}>Politica de privacidad</SecondaryButton>
       </BottomSheet>
     </>
   );

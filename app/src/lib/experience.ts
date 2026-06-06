@@ -5,6 +5,7 @@ import type {
   RecommendationSession,
   SavingsActivity,
 } from '@/types/app';
+import { PUBLIC_RECOMMENDATION_ONLY } from '@/config/public-build';
 
 const PAGAMAX_FEE_RATE = 0.16;
 const PAGAMAX_FEE_CAP_ARS = 2200;
@@ -73,6 +74,7 @@ function translateWarning(warning: string): string {
 }
 
 export function estimatePagamaxFeeArs(grossSavingsArs: number): number {
+  if (PUBLIC_RECOMMENDATION_ONLY) return 0;
   if (grossSavingsArs <= 0) return 0;
   return Math.round(Math.min(grossSavingsArs * PAGAMAX_FEE_RATE, PAGAMAX_FEE_CAP_ARS));
 }
@@ -123,26 +125,6 @@ export function buildRecommendationPresentation(
   session: RecommendationSession,
   recommendation: PaymentRecommendation,
 ) {
-  const ownerRoute = session.ownerRoute && session.ownerRoute.recommendation.method.id === recommendation.method.id
-    ? session.ownerRoute
-    : null;
-
-  if (ownerRoute) {
-    const confidence = buildConfidence(session.match.match_method, recommendation.warnings.length);
-    return {
-      grossSavingsArs: ownerRoute.grossDiscountArs,
-      pagamaxFeeArs: ownerRoute.customerDiscountShareArs,
-      netSavingsArs: ownerRoute.ownerCaptureArs,
-      confidence,
-      qualifiers: [
-        `Cliente paga ${ownerRoute.customerChargeArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })} a ${ownerRoute.payoutAlias}`,
-        `Pagamax captura ${ownerRoute.ownerCaptureArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}`,
-        `Despues paga el QR con ${ownerRoute.ownerMethod.label}`,
-      ],
-      caveats: recommendation.warnings.map(translateWarning),
-    };
-  }
-
   const grossSavingsArs = Math.max(0, Math.round(recommendation.estimatedSavingsArs));
   const pagamaxFeeArs = estimatePagamaxFeeArs(grossSavingsArs);
   const netSavingsArs = Math.max(0, grossSavingsArs - pagamaxFeeArs);

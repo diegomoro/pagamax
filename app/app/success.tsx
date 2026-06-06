@@ -67,11 +67,10 @@ function CelebrationParticles() {
 }
 
 export default function SuccessScreen() {
-  const params = useLocalSearchParams<{ index?: string; simulated?: string }>();
+  const params = useLocalSearchParams<{ index?: string }>();
   const { activity, currentSession, recordSuccessfulRecommendation, settings, toggleSavedMerchant } = usePagamax();
   const hasRecorded = useRef(false);
   const [recordedId, setRecordedId] = useState<string | null>(null);
-  const isSimulated = params.simulated === '1';
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -91,7 +90,7 @@ export default function SuccessScreen() {
     return (
       <View style={styles.empty}>
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No hay pago para guardar</Text>
+          <Text style={styles.emptyTitle}>No hay decision para guardar</Text>
           <Text style={styles.emptyBody}>Escanea un QR o busca un comercio para guardar una buena decision.</Text>
           <SecondaryButton onPress={() => router.replace('/scan')}>Escanear QR</SecondaryButton>
         </View>
@@ -126,17 +125,9 @@ export default function SuccessScreen() {
           <View style={styles.successIcon}>
             <Ionicons name="checkmark" size={30} color={colors.white} />
           </View>
-          <Text style={styles.kicker}>{isSimulated ? 'Prueba guardada' : 'Bien elegido'}</Text>
-          <Text style={styles.title}>
-            {isSimulated
-              ? `Ya sabes como pagar en ${currentSession.match.merchant_name}`
-              : 'Buena: miraste antes de pagar'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {isSimulated
-              ? 'No confirma pagos reales. Sirve para revisar el recorrido completo.'
-              : 'Quedo guardado. La proxima vez arrancas con ventaja.'}
-          </Text>
+          <Text style={styles.kicker}>Decision guardada</Text>
+          <Text style={styles.title}>Ya sabes como pagar en {currentSession.match.merchant_name}</Text>
+          <Text style={styles.subtitle}>Esto no confirma pagos reales. Solo guarda la recomendacion para que la proxima compra sea mas rapida.</Text>
         </LinearGradient>
 
         <RecommendationBreakdown
@@ -183,7 +174,7 @@ export default function SuccessScreen() {
       <View style={[styles.footer, { bottom: insets.bottom + spacing.md }]}>
         <CtaBar
           title="Siguiente compra: mirala antes"
-          primaryLabel="Escanear otro pago"
+          primaryLabel="Escanear otro QR"
           onPressPrimary={() => router.replace('/scan')}
           secondaryLabel="Volver al inicio"
           onPressSecondary={() => router.replace('/')}

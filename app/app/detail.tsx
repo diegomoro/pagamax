@@ -219,7 +219,7 @@ export default function DetailScreen() {
         </View>
 
         <SecondaryButton onPress={() => router.push({ pathname: '/success', params: { index: params.index ?? '0' } })}>
-          Guardar este pago
+          Guardar esta decision
         </SecondaryButton>
       </Animated.ScrollView>
     </View>

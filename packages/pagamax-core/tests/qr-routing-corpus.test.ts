@@ -34,7 +34,7 @@ const corpusMethods: PaymentMethodProfile[] = [
     creditAvailableArs: 200000,
     qrTransferLimitRemainingArs: 200000,
     promoCapRemainingArs: 200000,
-    receivingAlias: 'diego.daniel.moro',
+    receivingAlias: 'test.bbva.alias',
     receivingPriority: 20,
   },
   {
@@ -50,7 +50,7 @@ const corpusMethods: PaymentMethodProfile[] = [
     qrTransferLimitRemainingArs: 200000,
     promoCapRemainingArs: 200000,
     canReceiveCustomerTransfer: true,
-    receivingAlias: 'buceo.deseo.curso.mp',
+    receivingAlias: 'test.mercadopago.alias',
     receivingPriority: 10,
   },
   {
@@ -61,7 +61,7 @@ const corpusMethods: PaymentMethodProfile[] = [
     walletLabel: 'Naranja X',
     cardType: 'account_money',
     canReceiveCustomerTransfer: true,
-    receivingAlias: 'ddmoro.nx',
+    receivingAlias: 'test.naranjax.alias',
     receivingPriority: 30,
   },
 ];

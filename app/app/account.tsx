@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Card, IconButton, InlineNotice, Pill, PrimaryButton, ScreenScroll, SecondaryButton } from '@/components/ui';
+import { hasManagedBackend, requestAccountMagicLink } from '@/lib/backend';
 import { usePagamax } from '@/context/pagamax-context';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
@@ -17,12 +18,15 @@ function describeSyncStatus(status: 'local_only' | 'pending_backend' | 'synced')
 
 export default function AccountScreen() {
   const { account, createAccount, signOutAccount } = usePagamax();
+  const backendConfigured = hasManagedBackend();
   const [displayName, setDisplayName] = useState(account?.displayName ?? '');
   const [email, setEmail] = useState(account?.email ?? '');
   const [phoneLabel, setPhoneLabel] = useState(account?.phoneLabel ?? 'Pixel 8a');
   const [inviteCode, setInviteCode] = useState(account?.inviteCode ?? '');
   const [error, setError] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
 
   const canSave = displayName.trim().length >= 2 && isValidEmail(email) && !saving;
 
@@ -55,8 +59,27 @@ export default function AccountScreen() {
     }
   }
 
+  async function handleMagicLink() {
+    setError(null);
+    setAuthMessage(null);
+    if (!isValidEmail(email)) {
+      setError('Usa un email valido para recibir el link.');
+      return;
+    }
+
+    setSendingLink(true);
+    try {
+      const result = await requestAccountMagicLink(email.trim());
+      setAuthMessage(result ? 'Te mandamos el link de acceso al email.' : 'Configura el backend publico para enviar links de acceso.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No se pudo enviar el link.');
+    } finally {
+      setSendingLink(false);
+    }
+  }
+
   function handleSignOut() {
-    Alert.alert('Cerrar cuenta local', 'Se borra solo de este telefono.', [
+    Alert.alert('Cerrar sesion', 'Se cierra la sesion de este telefono. Tus datos sincronizados siguen disponibles hasta que elimines la cuenta.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Cerrar',
@@ -80,13 +103,13 @@ export default function AccountScreen() {
       {account ? (
         <View style={styles.statusRow}>
           <Pill label={describeSyncStatus(account.syncStatus)} tone={account.syncStatus === 'synced' ? 'success' : 'warning'} />
-          <Text style={styles.statusText}>Actualizada {new Date(account.updatedAt).toLocaleDateString('es-AR')}</Text>
+          <Text style={styles.statusText}>{account.emailVerified ? 'Email verificado' : 'Email pendiente'} - {new Date(account.updatedAt).toLocaleDateString('es-AR')}</Text>
         </View>
       ) : (
         <InlineNotice
-          title="Beta privada"
-          body="Esta cuenta queda guardada en este telefono hasta que conectemos el backend."
-          tone="default"
+          title="Cuenta publica"
+          body={backendConfigured ? 'Usamos email para sincronizar preferencias, privacidad y eliminacion de cuenta.' : 'El backend publico no esta configurado en este build; la cuenta queda pendiente de sincronizacion.'}
+          tone={backendConfigured ? 'default' : 'warning'}
         />
       )}
 
@@ -145,17 +168,26 @@ export default function AccountScreen() {
         </View>
 
         {error ? <InlineNotice title="Revisa estos datos" body={error} tone="warning" /> : null}
+        {authMessage ? <InlineNotice title="Acceso por email" body={authMessage} tone="default" /> : null}
       </Card>
 
       <View style={styles.actions}>
         <PrimaryButton onPress={() => void handleSave()} disabled={!canSave} style={!canSave ? styles.disabled : undefined}>
           {saving ? 'Guardando...' : account ? 'Guardar cuenta' : 'Crear cuenta'}
         </PrimaryButton>
+        {backendConfigured ? (
+          <SecondaryButton onPress={() => void handleMagicLink()} disabled={sendingLink}>
+            {sendingLink ? 'Enviando...' : 'Enviar link de acceso'}
+          </SecondaryButton>
+        ) : null}
         {account ? (
-          <SecondaryButton onPress={handleSignOut}>Cerrar cuenta local</SecondaryButton>
+          <SecondaryButton onPress={handleSignOut}>Cerrar sesion</SecondaryButton>
         ) : (
           <SecondaryButton onPress={() => router.replace('/')}>Ahora no</SecondaryButton>
         )}
+        {account ? (
+          <SecondaryButton onPress={() => router.push('/delete-account')}>Eliminar cuenta y datos</SecondaryButton>
+        ) : null}
       </View>
     </ScreenScroll>
   );

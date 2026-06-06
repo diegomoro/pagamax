@@ -56,7 +56,7 @@ function payoutMethod(overrides: Partial<PaymentMethodProfile> = {}): PaymentMet
     walletLabel: 'Mercado Pago',
     cardType: 'account_money',
     canReceiveCustomerTransfer: true,
-    receivingAlias: 'buceo.deseo.curso.mp',
+    receivingAlias: 'test.mercadopago.alias',
     receivingPriority: 10,
     ...overrides,
   };
@@ -75,7 +75,7 @@ describe('recommendPagamaxRoutes', () => {
     expect(result.ownerRoute!.customerDiscountShareArs).toBe(10000);
     expect(result.ownerRoute!.ownerCaptureArs).toBe(10000);
     expect(result.ownerRoute!.customerChargeArs).toBe(90000);
-    expect(result.ownerRoute!.payoutAlias).toBe('buceo.deseo.curso.mp');
+    expect(result.ownerRoute!.payoutAlias).toBe('test.mercadopago.alias');
   });
 
   it('does not default to an owner route without enough configured balance', () => {
@@ -138,7 +138,7 @@ describe('recommendPagamaxRoutes', () => {
         payoutMethod({
           id: 'carrefour-payout',
           provider: 'carrefour_bank',
-          receivingAlias: 'Paga.Menos.CF',
+          receivingAlias: 'test.carrefour.alias',
         }),
       ],
       candidates: [{ source: 'merchant', promo: makePromo() }],

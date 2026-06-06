@@ -55,7 +55,6 @@ export default function ResultsScreen() {
   const [hero, ...rest] = ranked;
   const heroPresentation = hero ? buildRecommendationPresentation(currentSession, hero) : null;
   const handoffPlan = hero ? buildPaymentHandoffPlan(currentSession, hero) : null;
-  const ownerRoute = currentSession.ownerRoute;
   const qrMeta = formatQrMeta(currentSession);
   const alternativeCount = rest.length;
 
@@ -111,13 +110,6 @@ export default function ResultsScreen() {
               </Pressable>
             ) : null}
 
-            {ownerRoute ? (
-              <InlineNotice
-                title={`Cobrar ${formatArs(ownerRoute.customerChargeArs)}`}
-                body={`Alias destino: ${ownerRoute.payoutAlias}. El cliente se queda con ${formatArs(ownerRoute.customerDiscountShareArs)} de descuento y Pagamax captura ${formatArs(ownerRoute.ownerCaptureArs)}. Despues abri ${ownerRoute.ownerMethod.label} para pagar el QR original.`}
-              />
-            ) : null}
-
             {hero && heroPresentation && handoffPlan ? (
               <HeroRecommendationCard
                 recommendation={hero}
@@ -145,14 +137,14 @@ export default function ResultsScreen() {
             {handoffStarted && handoffPlan ? (
               <View style={styles.returnPanel}>
                 <View style={styles.returnCopy}>
-                  <Text style={styles.returnTitle}>Cuando termines</Text>
+                  <Text style={styles.returnTitle}>Cuando vuelvas</Text>
                   <Text style={styles.returnBody}>{handoffPlan.returnInstruction}</Text>
                 </View>
                 <Pressable
                   style={styles.returnButton}
-                  onPress={() => router.push({ pathname: '/success', params: { index: '0', simulated: '1' } })}
+                  onPress={() => router.push({ pathname: '/success', params: { index: '0' } })}
                 >
-                  <Text style={styles.returnButtonText}>Listo, ya volvi</Text>
+                  <Text style={styles.returnButtonText}>Guardar decision</Text>
                 </Pressable>
               </View>
             ) : null}
@@ -194,8 +186,8 @@ export default function ResultsScreen() {
             <Pressable onPress={() => router.replace('/scan')}>
               <Text style={styles.footerLink}>Escanear otro QR</Text>
             </Pressable>
-            <Pressable onPress={() => router.push({ pathname: '/success', params: { index: '0', simulated: '1' } })}>
-              <Text style={styles.footerLink}>Cerrar prueba</Text>
+            <Pressable onPress={() => router.push({ pathname: '/success', params: { index: '0' } })}>
+              <Text style={styles.footerLink}>Guardar decision</Text>
             </Pressable>
           </View>
         }

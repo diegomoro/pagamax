@@ -33,4 +33,25 @@ describe('parseQr', () => {
     expect(parsed.paymentProvider).toBe('com.adquirente');
     expect(parsed.merchantName).toBe('FULL NAME');
   });
+
+  it('does not crash on malformed or hostile QR payloads', () => {
+    const malformedPayloads = [
+      '',
+      'https://evil.example/pay?amount=999999',
+      '0002010102',
+      '000201010211590999',
+      '00020101021154xx10005802AR5905Jumbo',
+      '0002010102115408not-a-no5802AR5905Jumbo',
+      '0002010102115905Cafe\u0000<script>',
+      '9999'.repeat(250),
+      'not-a-qr'.repeat(64),
+    ];
+
+    for (const payload of malformedPayloads) {
+      const parsed = parseQr(payload);
+      expect(parsed.raw).toBe(payload);
+      expect(parsed.amountArs === null || Number.isFinite(parsed.amountArs)).toBe(true);
+      expect(parsed.qrType === 'static' || parsed.qrType === 'dynamic' || parsed.qrType === 'unknown').toBe(true);
+    }
+  });
 });
