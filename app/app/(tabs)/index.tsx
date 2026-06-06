@@ -82,7 +82,7 @@ export default function HomeScreen() {
   const sharePagamax = async () => {
     try {
       await Share.share({
-        message: 'Yo antes de pagar escaneo con Paga Menos. Me dice con que app o tarjeta conviene pagar y despues confirmo yo.',
+        message: 'Antes de pagar escaneo con Paga Menos. Me dice qué app o tarjeta conviene y después confirmo yo.',
       });
     } catch {
       // Sharing is optional; the home screen should stay quiet if the sheet fails.
@@ -109,7 +109,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.errorWrap}>
         <InlineNotice title="No se pudieron cargar los datos" body={error ?? 'Intenta abrir la app de nuevo.'} tone="warning" />
-        <SecondaryButton onPress={() => router.push('/manual')}>Buscar comercio</SecondaryButton>
+        <SecondaryButton onPress={() => router.push('/manual')}>Ver promos de hoy</SecondaryButton>
       </View>
     );
   }
@@ -131,8 +131,8 @@ export default function HomeScreen() {
 
         <View style={styles.heroArea}>
           <View style={styles.habitCue}>
-            <Text style={styles.habitTitle}>Antes de pagar, escanea.</Text>
-            <Text style={styles.habitBody}>Te digo con que app o tarjeta conviene. Vos confirmas el pago.</Text>
+            <Text style={styles.habitTitle}>Antes de pagar, escaneá.</Text>
+            <Text style={styles.habitBody}>Te digo qué app o tarjeta te conviene. Vos aprobás el pago en tu billetera.</Text>
           </View>
 
           <Animated.View style={[styles.scanMotionWrap, { transform: [{ translateY: scanLift }] }]}>
@@ -141,13 +141,13 @@ export default function HomeScreen() {
               <LinearGradient colors={[colors.accent, colors.teal]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scanFill}>
                 <View style={styles.liveRow}>
                   <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>Mostrame el QR</Text>
+                  <Text style={styles.liveText}>Mostrame el QR del comercio</Text>
                 </View>
                 <View style={styles.scanIconWrap}>
                   <Ionicons name="qr-code-outline" size={42} color={colors.teal} />
                 </View>
                 <Text style={styles.scanLabel}>Escanear QR</Text>
-                <Text style={styles.scanMeta}>En segundos sabes con que pagar</Text>
+                <Text style={styles.scanMeta}>En segundos sabés con qué pagar</Text>
               </LinearGradient>
             </Pressable>
           </Animated.View>
@@ -155,7 +155,7 @@ export default function HomeScreen() {
           <View style={styles.trustRow}>
             <View style={styles.trustItem}>
               <Ionicons name="shield-checkmark-outline" size={15} color={colors.accentPressed} />
-              <Text style={styles.trustText}>No paga por vos</Text>
+              <Text style={styles.trustText}>Vos aprobás</Text>
             </View>
             <View style={styles.trustItem}>
               <Ionicons name="pricetag-outline" size={15} color={colors.accentPressed} />
@@ -163,19 +163,19 @@ export default function HomeScreen() {
             </View>
             <View style={styles.trustItem}>
               <Ionicons name="megaphone-outline" size={15} color={colors.warning} />
-              <Text style={styles.trustText}>Pagos marcados</Text>
+              <Text style={styles.trustText}>Sponsors marcados</Text>
             </View>
           </View>
 
           <View style={styles.advantageCard}>
             <View style={styles.advantageItem}>
               <Text style={styles.advantageValue}>{hasRealActivity ? formatArs(summary.monthlyNetSavingsArs) : formatArs(displaySummary.monthlyNetSavingsArs)}</Text>
-              <Text style={styles.advantageLabel}>{hasRealActivity ? 'para vos este mes' : 'podrias guardar'}</Text>
+              <Text style={styles.advantageLabel}>{hasRealActivity ? 'para vos este mes' : 'podrías ahorrar'}</Text>
             </View>
             <View style={styles.advantageDivider} />
             <View style={styles.advantageItem}>
               <Text style={styles.advantageValue}>{hasRealActivity ? checksThisMonth : '3'}</Text>
-              <Text style={styles.advantageLabel}>{hasRealActivity ? 'veces que miraste' : 'compras tipicas'}</Text>
+              <Text style={styles.advantageLabel}>{hasRealActivity ? 'veces que miraste' : 'compras ejemplo'}</Text>
             </View>
           </View>
 
@@ -185,8 +185,8 @@ export default function HomeScreen() {
                 <Ionicons name="flame-outline" size={18} color={colors.warning} />
               </View>
               <View style={styles.momentumCopy}>
-                <Text style={styles.momentumTitle}>Pagando con cabeza</Text>
-                <Text style={styles.momentumBody}>{smartStreak} pagos mirados antes de elegir. Objetivo: quedarte con {formatArs(monthlyGoalArs)}.</Text>
+                <Text style={styles.momentumTitle}>Pagá con cabeza</Text>
+                <Text style={styles.momentumBody}>{smartStreak} compras miradas antes de elegir. Objetivo: que no se te escape {formatArs(monthlyGoalArs)}.</Text>
               </View>
               <Text style={styles.momentumPercent}>{Math.round(goalProgress * 100)}%</Text>
             </View>
@@ -202,7 +202,7 @@ export default function HomeScreen() {
             >
               <View style={styles.promoHeader}>
                 <View>
-                  <Text style={styles.promoKicker}>Puede convenirte ahora</Text>
+                  <Text style={styles.promoKicker}>Para mirar hoy</Text>
                   <Text style={styles.promoTitle}>{bestNearbyPromo.merchantName}</Text>
                 </View>
                 <Text style={styles.promoValue}>{formatArs(bestNearbyPromo.likelyNetSavingsArs)}</Text>
@@ -211,16 +211,16 @@ export default function HomeScreen() {
               {merchantSpotlight ? (
                 <View style={styles.sponsoredLine}>
                   <Ionicons name="megaphone-outline" size={14} color={colors.warning} />
-                  <Text style={styles.sponsoredText}>Pagado: {merchantSpotlight.merchantName}. Solo aparece separado y marcado, para no mezclarlo con el mejor ahorro.</Text>
+                  <Text style={styles.sponsoredText}>Sponsor: {merchantSpotlight.merchantName}. Va separado y marcado, sin tapar la mejor opción para vos.</Text>
                 </View>
               ) : null}
             </Pressable>
           ) : null}
 
           <View style={styles.secondaryArea}>
-            <SecondaryButton onPress={() => router.push('/manual')}>No tengo QR</SecondaryButton>
+            <SecondaryButton onPress={() => router.push('/manual')}>Ver promos de hoy</SecondaryButton>
             <Pressable onPress={() => router.push('/checkout-link')}>
-              <Text style={styles.linkAction}>Pegar link de pago</Text>
+              <Text style={styles.linkAction}>Tengo un link de pago</Text>
             </Pressable>
           </View>
 
@@ -233,7 +233,7 @@ export default function HomeScreen() {
 
           {!currentSession && quickMerchantNames.length > 0 ? (
             <View style={styles.quickArea}>
-              <Text style={styles.quickLabel}>Lugares que sueles mirar</Text>
+              <Text style={styles.quickLabel}>Lugares para chusmear promos</Text>
               <View style={styles.quickRow}>
                 {quickMerchantNames.map((merchant) => (
                   <Pressable
@@ -250,7 +250,7 @@ export default function HomeScreen() {
 
           <Pressable style={styles.shareNudge} onPress={() => void sharePagamax()}>
             <Ionicons name="people-outline" size={18} color={colors.accentPressed} />
-            <Text style={styles.shareNudgeText}>Pasarselo a alguien que siempre paga de mas</Text>
+            <Text style={styles.shareNudgeText}>Pasáselo a alguien que siempre paga de más</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -383,6 +383,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.whiteSoft,
+    marginTop: spacing.xl,
   },
   scanLabel: {
     ...typography.displayLg,

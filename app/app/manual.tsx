@@ -35,14 +35,14 @@ export default function ManualEntryScreen() {
   const submit = async () => {
     if (!amountArs) {
       triggerHaptic(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
-      Alert.alert('Monto invalido', 'Ingresa un monto positivo en pesos.');
+      Alert.alert('Monto inválido', 'Poné un monto positivo en pesos.');
       return;
     }
 
     const merchantName = merchantInput.trim();
     if (!merchantName) {
       triggerHaptic(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
-      Alert.alert('Comercio requerido', 'Elige o escribe un comercio antes de continuar.');
+      Alert.alert('Falta el comercio', 'Elegí un comercio antes de seguir.');
       return;
     }
 
@@ -55,7 +55,7 @@ export default function ManualEntryScreen() {
       triggerHaptic(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
       router.replace('/results');
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'No se pudo calcular con que pagar.';
+      const message = caught instanceof Error ? caught.message : 'No se pudo calcular con qué pagar.';
       Alert.alert('Error', message);
     }
   };
@@ -66,12 +66,12 @@ export default function ManualEntryScreen() {
         <View style={styles.topBar}>
           <IconButton icon="arrow-back" onPress={() => router.back()} />
         </View>
-        <PageTitle title="Decime donde y cuanto" subtitle="Si no tenes QR, escribi el comercio y el total. Te digo con que pagar." />
+        <PageTitle title="Promos para hoy" subtitle="Elegí un comercio, poné un monto y mirá qué banco, tarjeta o billetera te conviene." />
 
         {pendingScan && !allowOverride ? (
           <InlineNotice
             title="Comercio detectado"
-            body={`Ya vimos ${pendingScan.match.merchant_name}. Solo falta el monto para decirte con que pagar.`}
+            body={`Ya vimos ${pendingScan.match.merchant_name}. Solo falta el monto para decirte con qué pagar.`}
           />
         ) : null}
 
@@ -135,7 +135,7 @@ export default function ManualEntryScreen() {
       </ScreenScroll>
 
       <StickyButton
-        label="Decime con que pagar"
+        label="Ver con qué pagar"
         preview={canSubmit ? `${merchantInput.trim()} por ${formatArs(amountArs ?? 0)}` : 'Completa monto y comercio'}
         disabled={!canSubmit}
         onPress={() => void submit()}

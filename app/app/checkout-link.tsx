@@ -20,7 +20,7 @@ export default function CheckoutLinkScreen() {
 
   const submit = () => {
     if (!amountArs) {
-      Alert.alert('Monto invalido', 'Ingresa un monto positivo para comparar el link de pago.');
+      Alert.alert('Monto inválido', 'Poné un monto positivo para comparar el link de pago.');
       return;
     }
 
@@ -40,7 +40,7 @@ export default function CheckoutLinkScreen() {
           <IconButton icon="arrow-back" onPress={() => router.back()} />
         </View>
 
-        <PageTitle title="Pegar link de pago" subtitle="Para compras online: pega el link, pone el monto y mira con que conviene pagar." />
+        <PageTitle title="Link de pago" subtitle="Pegá el link, poné el monto y mirá con qué conviene pagar." />
 
         <View style={styles.card}>
           <Text style={styles.label}>URL del link de pago</Text>
@@ -59,7 +59,7 @@ export default function CheckoutLinkScreen() {
             style={styles.input}
             value={merchantOverride}
             onChangeText={setMerchantOverride}
-            placeholder={detectedMerchant || 'Detectado desde el link o ingresalo manualmente'}
+            placeholder={detectedMerchant || 'Lo detectamos del link o lo elegís vos'}
             placeholderTextColor={colors.inkMuted}
           />
 
@@ -78,8 +78,8 @@ export default function CheckoutLinkScreen() {
       </ScreenScroll>
 
       <StickyButton
-        label="Decime con que pagar"
-        preview={canSubmit ? `Mirar ${effectiveMerchant}` : 'Pega link, comercio y monto'}
+        label="Ver con qué pagar"
+        preview={canSubmit ? `Mirar ${effectiveMerchant}` : 'Pegá link, comercio y monto'}
         disabled={!canSubmit}
         onPress={submit}
       />

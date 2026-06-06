@@ -51,13 +51,13 @@ export function ScanOverlay({
   const phaseCopy: Record<ScanPhase, string> = {
     scanning: 'Buscando QR',
     detected: 'QR detectado',
-    calculating: 'Viendo con que pagar',
+    calculating: 'Calculando la mejor opción',
     ready: 'Listo, ya esta',
-    error: 'Revisa el QR',
+    error: 'Revisá el QR',
   };
 
   return (
-    <View pointerEvents="none" style={[styles.overlay, { paddingTop: insets.top + spacing.xxl }]}>
+    <View pointerEvents="none" style={[styles.overlay, { paddingTop: insets.top + spacing.xxl + spacing.xl }]}>
       <View style={styles.topCopy}>
         <Text style={styles.title}>Escanear QR</Text>
         <View style={[styles.statusPill, (success || phase === 'ready') && styles.statusPillReady, (error || phase === 'error') && styles.statusPillError]}>

@@ -24,7 +24,7 @@ export default function TermsScreen() {
         <Text style={styles.heading}>Ofertas pagas</Text>
         <Text style={styles.body}>Si un comercio o emisor paga por aparecer, se marca de forma separada. La recomendacion principal debe priorizar utilidad para el usuario.</Text>
       </Card>
-      <SecondaryButton onPress={() => void Linking.openURL(LEGAL_LINKS.terms)}>Abrir terminos publicos</SecondaryButton>
+      <SecondaryButton onPress={() => void Linking.openURL(LEGAL_LINKS.terms)}>Abrir términos públicos</SecondaryButton>
     </ScreenScroll>
   );
 }

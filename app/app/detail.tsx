@@ -55,7 +55,7 @@ function formatChannel(raw: string | null | undefined) {
 function formatHandoffConfidence(label: ReturnType<typeof buildPaymentHandoffPlan>['confidenceLabel']): string {
   if (label === 'high confidence') return 'Muy seguro';
   if (label === 'estimated') return 'Estimado';
-  return 'Revisalo manual';
+  return 'Revisalo en la app';
 }
 
 export default function DetailScreen() {
@@ -163,7 +163,7 @@ export default function DetailScreen() {
           <Text style={styles.handoffTitle}>{handoffPlan.primaryLabel}</Text>
           <Text style={styles.handoffText}>{handoffPlan.instruction}</Text>
           <Text style={styles.handoffMeta}>
-            QR: {handoffPlan.supportsQrPayload ? 'puede llevarlo' : 'manual'} - monto: {handoffPlan.supportsAmount ? 'puede llevarlo' : 'manual'}
+            QR: {handoffPlan.supportsQrPayload ? 'lo lleva' : 'lo escaneás vos'} - monto: {handoffPlan.supportsAmount ? 'lo lleva' : 'lo revisás vos'}
           </Text>
         </View>
 

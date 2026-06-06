@@ -70,7 +70,7 @@ export default function AccountScreen() {
     setSendingLink(true);
     try {
       const result = await requestAccountMagicLink(email.trim());
-      setAuthMessage(result ? 'Te mandamos el link de acceso al email.' : 'Configura el backend publico para enviar links de acceso.');
+      setAuthMessage(result ? 'Te mandamos el link de acceso al email.' : 'Falta configurar el backend público para mandar links de acceso.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'No se pudo enviar el link.');
     } finally {
@@ -96,7 +96,7 @@ export default function AccountScreen() {
     <ScreenScroll contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
         <IconButton icon="arrow-back" onPress={() => router.back()} />
-        <Text style={styles.title}>{account ? 'Cuenta beta' : 'Crear cuenta'}</Text>
+        <Text style={styles.title}>{account ? 'Tu cuenta' : 'Crear cuenta'}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -107,8 +107,8 @@ export default function AccountScreen() {
         </View>
       ) : (
         <InlineNotice
-          title="Cuenta publica"
-          body={backendConfigured ? 'Usamos email para sincronizar preferencias, privacidad y eliminacion de cuenta.' : 'El backend publico no esta configurado en este build; la cuenta queda pendiente de sincronizacion.'}
+          title="Tu cuenta de Paga Menos"
+          body={backendConfigured ? 'Usamos email para sincronizar preferencias, privacidad y eliminación de cuenta.' : 'Este build todavía no tiene backend público; la cuenta queda pendiente de sincronización.'}
           tone={backendConfigured ? 'default' : 'warning'}
         />
       )}

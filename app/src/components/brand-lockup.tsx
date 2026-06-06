@@ -19,7 +19,7 @@ export function BrandLockup({
       <Image source={BRAND_ICON} style={{ width: iconSize, height: iconSize, borderRadius: iconSize * 0.24 }} />
       <View style={styles.copy}>
         <Text style={[styles.name, compact && styles.nameCompact]}>Paga Menos</Text>
-        {showTagline ? <Text style={styles.tagline}>Escaneas, comparas y pagas con menos.</Text> : null}
+        {showTagline ? <Text style={styles.tagline}>Escaneás, comparás y pagás mejor.</Text> : null}
         {showHolding ? <Text style={styles.holding}>Una app de Pagamax</Text> : null}
       </View>
     </View>

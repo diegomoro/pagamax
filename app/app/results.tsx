@@ -30,7 +30,7 @@ function formatQrMeta(session: RecommendationSession): string | null {
 function formatHandoffConfidence(label: NonNullable<ReturnType<typeof buildPaymentHandoffPlan>>['confidenceLabel']): string {
   if (label === 'high confidence') return 'Muy seguro';
   if (label === 'estimated') return 'Estimado';
-  return 'Revisalo manual';
+  return 'Revisalo en la app';
 }
 
 export default function ResultsScreen() {
@@ -40,13 +40,13 @@ export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
 
   if (loading) {
-    return <LoadingBlock label="Buscando con que conviene pagar..." />;
+    return <LoadingBlock label="Buscando con qué conviene pagar..." />;
   }
 
   if (!currentSession) {
     return (
       <View style={styles.emptyWrap}>
-        <EmptyState title="Todavia no miramos ningun pago" body="Escanea un QR o escribe comercio y monto para saber con que pagar." />
+        <EmptyState title="Todavía no miramos ningún QR" body="Escaneá un QR o entrá a Inicio para ver promos de hoy." />
       </View>
     );
   }
@@ -70,7 +70,7 @@ export default function ResultsScreen() {
       recordHandoff(hero.method.provider, mode, handoffPlan.detail);
       setHandoffStarted(true);
       if (mode === 'store') {
-        Alert.alert('Se abrio Google Play', `No se pudo abrir ${handoffPlan.label} en este telefono.`);
+        Alert.alert('Se abrió Google Play', `No se pudo abrir ${handoffPlan.label} en este teléfono.`);
       }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo abrir la app seleccionada.';
@@ -106,7 +106,7 @@ export default function ResultsScreen() {
                 })}
               >
                 <Text style={styles.estimatedTitle}>No vi el monto en el QR</Text>
-                <Text style={styles.estimatedBody}>Uso $45.000 para estimar. Toca aca si queres poner el total real.</Text>
+                <Text style={styles.estimatedBody}>Uso $45.000 para estimar. Tocá acá si querés poner el total real.</Text>
               </Pressable>
             ) : null}
 
@@ -130,7 +130,7 @@ export default function ResultsScreen() {
             {handoffPlan ? (
               <InlineNotice
                 title={formatHandoffConfidence(handoffPlan.confidenceLabel)}
-                body={`${handoffPlan.instruction} ${handoffPlan.supportsQrPayload || handoffPlan.supportsAmount ? 'Puede llevar datos del QR.' : 'No manda QR ni monto solo.'}`}
+                body={`${handoffPlan.instruction} ${handoffPlan.supportsQrPayload || handoffPlan.supportsAmount ? 'Si la app lo permite, lleva datos del QR.' : 'Vas a escanear y revisar el monto vos.'}`}
               />
             ) : null}
 

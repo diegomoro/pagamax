@@ -57,8 +57,8 @@ export function buildPaymentHandoffPlan(
     supportsAmount: config.canReceiveAmount,
     needsManualQrScan,
     instruction: !needsManualQrScan
-      ? `Se abrira ${config.label} con el QR detectado. Revisa antes de confirmar.`
-      : `Se abrira ${config.label}. Abri el scanner QR en esa app y paga a ${merchant} por ${formatArs(amount)}. Confirma solo dentro de ${config.label}.`,
+      ? `Se abrirá ${config.label} con el QR detectado. Revisá antes de confirmar.`
+      : `Se abrirá ${config.label}. Abrí el lector QR en esa app y pagá a ${merchant} por ${formatArs(amount)}. Confirmá solo dentro de ${config.label}.`,
     detail: `${routeCopy} ${config.fallbackBehavior}`,
     returnInstruction: `Al volver, podes guardar la decision. Paga Menos no confirma ni registra pagos reales.`,
   };

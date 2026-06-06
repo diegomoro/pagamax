@@ -26,7 +26,7 @@ export default function DataControlsScreen() {
       <Card style={styles.card}>
         <ToggleRow
           title="Analitica"
-          body="Eventos de uso, ranking y handoff sin credenciales ni QR completo."
+          body="Eventos de uso, ranking y apertura de apps, sin credenciales ni QR completo."
           value={settings.analyticsEnabled}
           onValueChange={(value) => updateSettings({ analyticsEnabled: value })}
         />

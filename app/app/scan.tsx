@@ -61,12 +61,12 @@ export default function ScanScreen() {
     return (
       <View style={styles.permissionScreen}>
         <View style={styles.permissionCard}>
-          <Text style={styles.permissionTitle}>Activa la camara para escanear rapido</Text>
+          <Text style={styles.permissionTitle}>Activá la cámara para escanear al toque</Text>
           <Text style={styles.permissionBody}>
-            La camara se usa solo mientras esta pantalla esta abierta. Si prefieres no dar permiso, puedes buscar el comercio manualmente.
+            La cámara se usa solo mientras esta pantalla está abierta. Si preferís no dar permiso, podés mirar promos desde Inicio.
           </Text>
-          <PrimaryButton onPress={() => void requestPermission()}>Dar permiso de camara</PrimaryButton>
-          <SecondaryButton onPress={() => router.replace('/manual')}>Buscar comercio</SecondaryButton>
+          <PrimaryButton onPress={() => void requestPermission()}>Dar permiso de cámara</PrimaryButton>
+          <SecondaryButton onPress={() => router.replace('/')}>Volver al inicio</SecondaryButton>
         </View>
       </View>
     );
@@ -94,10 +94,10 @@ export default function ScanScreen() {
       </View>
 
       <View style={[styles.bottomCard, { bottom: insets.bottom + spacing.lg }]}>
-        <Text style={styles.scanHint}>Apunta al QR. Te decimos con que pagar.</Text>
+        <Text style={styles.scanHint}>Apuntá al QR. Te decimos con qué pagar.</Text>
 
-        <Pressable hitSlop={12} onPress={() => router.replace('/manual')}>
-          <Text style={styles.bottomLink}>No ves el QR? Escribi el comercio</Text>
+        <Pressable hitSlop={12} onPress={() => router.replace('/')}>
+          <Text style={styles.bottomLink}>¿No hay QR? Volvé al inicio y mirá promos de hoy</Text>
         </Pressable>
 
         {settings.debugEnabled ? (
@@ -114,7 +114,7 @@ export default function ScanScreen() {
                   numberOfLines={4}
                   value={pasteValue}
                   onChangeText={setPasteValue}
-                  placeholder="Pega aqui el payload EMVCo"
+                  placeholder="Pegá acá el payload EMVCo"
                   placeholderTextColor={colors.inkMuted}
                 />
                 <SecondaryButton onPress={() => void continueWithPayload(pasteValue.trim())}>Procesar QR</SecondaryButton>

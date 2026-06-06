@@ -41,7 +41,7 @@ export default function OnboardingScreen() {
         </View>
         <View style={styles.benefits}>
           <Chip label="Escanear antes de pagar" selected />
-          <Chip label="Te digo con que pagar" selected />
+        <Chip label="Te digo con qué pagar" selected />
           <Chip label="Vos confirmas siempre" selected />
         </View>
       </Card>
@@ -77,7 +77,7 @@ export default function OnboardingScreen() {
           </>
         ) : (
           <>
-            <PrimaryButton onPress={finish}>{account ? 'Escanear mi primer pago' : 'Crear cuenta beta'}</PrimaryButton>
+            <PrimaryButton onPress={finish}>{account ? 'Escanear mi primer QR' : 'Crear cuenta'}</PrimaryButton>
             <SecondaryButton onPress={() => setStep((prev) => Math.max(0, prev - 1))}>Atras</SecondaryButton>
           </>
         )}
