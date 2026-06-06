@@ -15,7 +15,7 @@ import { InteractionManager, Platform } from 'react-native';
 import { inferMerchantFromCheckoutUrl } from '@/lib/demo-data';
 import { buildActivityFromSession } from '@/lib/experience';
 import { buildMerchantOptions, loadDefaultMethods, loadInitialPromoIndex, syncRemotePromoIndex, type MerchantOption } from '@/lib/data';
-import { APP_VARIANT, KILL_SWITCH_ENABLED, OWNER_SPLIT_FLOW_ENABLED, PUBLIC_RECOMMENDATION_ONLY } from '@/config/public-build';
+import { APP_VARIANT, IS_PUBLIC_BUILD, KILL_SWITCH_ENABLED, OWNER_SPLIT_FLOW_ENABLED, PUBLIC_RECOMMENDATION_ONLY } from '@/config/public-build';
 import {
   logoutBackendSession,
   refreshBackendSession,
@@ -166,10 +166,19 @@ function hydrateStoredMethods(storedMethodsRaw: string | null, seedMethods: Stor
   if (!storedMethodsRaw) return seedMethods;
 
   const storedMethods = JSON.parse(storedMethodsRaw) as StoredPaymentMethod[];
+  const hasOwnerState = storedMethods.some((method) => (
+    method.ownerPhone === true
+    || method.canReceiveCustomerTransfer === true
+    || method.receivingAlias != null
+    || method.availableBalanceArs != null
+    || method.creditAvailableArs != null
+    || method.qrTransferLimitRemainingArs != null
+    || method.promoCapRemainingArs != null
+  ));
   const hasLegacyDemoMethods = storedMethods.some((method) => LEGACY_DEMO_METHOD_IDS.has(method.id));
   const hasCurrentUserSeed = seedMethods.every((method) => storedMethods.some((stored) => stored.id === method.id));
 
-  if (hasLegacyDemoMethods || !hasCurrentUserSeed) {
+  if ((IS_PUBLIC_BUILD && hasOwnerState) || hasLegacyDemoMethods || !hasCurrentUserSeed) {
     return seedMethods;
   }
 
