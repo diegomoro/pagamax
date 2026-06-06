@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CompactRecommendationRow } from '@/components/recommendation-card';
@@ -12,6 +13,8 @@ import { buildRecommendationPresentation, sortRecommendationsForMode } from '@/l
 import { colors, radius, shadows, spacing, typography } from '@/lib/theme';
 
 const DAY_LABELS: Record<string, string> = {
+  everyday: 'todos los dias',
+  daily: 'todos los dias',
   monday: 'lunes',
   tuesday: 'martes',
   wednesday: 'miercoles',
@@ -50,9 +53,9 @@ function formatChannel(raw: string | null | undefined) {
 }
 
 function formatHandoffConfidence(label: ReturnType<typeof buildPaymentHandoffPlan>['confidenceLabel']): string {
-  if (label === 'high confidence') return 'Confianza alta';
+  if (label === 'high confidence') return 'Muy seguro';
   if (label === 'estimated') return 'Estimado';
-  return 'Verificacion manual';
+  return 'Revisalo manual';
 }
 
 export default function DetailScreen() {
@@ -79,7 +82,7 @@ export default function DetailScreen() {
   if (!currentSession || !recommendation) {
     return (
       <View style={styles.emptyWrap}>
-        <EmptyState title="No hay detalle cargado" body="Vuelve a resultados y elige una recomendacion." />
+        <EmptyState title="No hay detalle cargado" body="Volver a resultados y elegir otra opcion." />
       </View>
     );
   }
@@ -130,11 +133,11 @@ export default function DetailScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.value}>{recommendation.valueType === 'fallback' ? 'Ruta por defecto' : presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
-          <Text style={styles.caption}>{recommendation.valueType === 'fallback' ? 'No vimos descuento confiable. Paga simple y revisa antes de confirmar.' : 'Ahorro neto estimado para vos'}</Text>
-          <Text style={styles.net}>Ruta sugerida: {recommendation.method.label}</Text>
+          <Text style={styles.value}>{recommendation.valueType === 'fallback' ? 'Paga simple' : presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
+          <Text style={styles.caption}>{recommendation.valueType === 'fallback' ? 'No encontre promo segura. Esta es la opcion directa.' : 'Plata estimada que queda para vos'}</Text>
+          <Text style={styles.net}>Usa: {recommendation.method.label}</Text>
           <View style={styles.pills}>
-            <Pill label={recommendation.valueType === 'cashback' ? 'Reintegro' : recommendation.valueType === 'financing_estimate' ? 'Cuotas' : recommendation.valueType === 'fallback' ? 'Ruta disponible' : 'Descuento'} tone="accent" />
+            <Pill label={recommendation.valueType === 'cashback' ? 'Reintegro' : recommendation.valueType === 'financing_estimate' ? 'Cuotas' : recommendation.valueType === 'fallback' ? 'Opcion simple' : 'Descuento'} tone="accent" />
             <Pill label={recommendation.source === 'merchant' ? 'Regla del comercio' : recommendation.source === 'fallback' ? 'Sin promo confirmada' : 'Regla general'} />
           </View>
         </View>
@@ -148,14 +151,19 @@ export default function DetailScreen() {
           />
         )}
         <Text style={styles.orderNote}>
-          Ranking actual: {settings.optimizationMode === 'max_savings' ? 'maximo ahorro neto' : 'pago mas rapido'}
+          Orden actual: {settings.optimizationMode === 'max_savings' ? 'mas plata para vos' : 'menos vueltas'}
         </Text>
+
+        <View style={styles.integrityCard}>
+          <Ionicons name="shield-checkmark-outline" size={18} color={colors.accentPressed} />
+          <Text style={styles.integrityText}>Esta opcion se ordena por lo que mas sirve en este pago. Los comercios pagos aparecen marcados y no se mezclan aca.</Text>
+        </View>
 
         <View style={styles.handoffCard}>
           <Text style={styles.handoffTitle}>{handoffPlan.primaryLabel}</Text>
           <Text style={styles.handoffText}>{handoffPlan.instruction}</Text>
           <Text style={styles.handoffMeta}>
-            QR: {handoffPlan.supportsQrPayload ? 'handoff soportado' : 'manual'} - monto: {handoffPlan.supportsAmount ? 'handoff soportado' : 'manual'}
+            QR: {handoffPlan.supportsQrPayload ? 'puede llevarlo' : 'manual'} - monto: {handoffPlan.supportsAmount ? 'puede llevarlo' : 'manual'}
           </Text>
         </View>
 
@@ -173,7 +181,7 @@ export default function DetailScreen() {
 
         <View style={styles.section}>
           <Pressable onPress={() => setReasonsOpen((prev) => !prev)} style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Por que funciona</Text>
+            <Text style={styles.sectionTitle}>Por que conviene</Text>
             <Text style={styles.sectionToggle}>{reasonsOpen ? '-' : '+'}</Text>
           </Pressable>
           {reasonsOpen ? presentation.qualifiers.map((reason) => (
@@ -186,7 +194,7 @@ export default function DetailScreen() {
 
         {presentation.caveats.length > 0 ? (
           <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>Condiciones y caveats</Text>
+            <Text style={styles.warningTitle}>Condiciones a mirar</Text>
             {presentation.caveats.map((warning) => (
               <Text key={warning} style={styles.warningText}>{warning}</Text>
             ))}
@@ -211,7 +219,7 @@ export default function DetailScreen() {
         </View>
 
         <SecondaryButton onPress={() => router.push({ pathname: '/success', params: { index: params.index ?? '0' } })}>
-          Marcar ahorro
+          Guardar este pago
         </SecondaryButton>
       </Animated.ScrollView>
     </View>
@@ -305,6 +313,19 @@ const styles = StyleSheet.create({
   orderNote: {
     ...typography.caption,
     color: colors.inkMuted,
+  },
+  integrityCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.accentSoft,
+    padding: spacing.md,
+  },
+  integrityText: {
+    ...typography.bodySm,
+    color: colors.accentPressed,
+    flex: 1,
   },
   handoffCard: {
     backgroundColor: colors.surface,

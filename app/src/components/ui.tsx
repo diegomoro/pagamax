@@ -307,13 +307,18 @@ export function EmptyState({
   title,
   body,
   action,
+  icon = 'sparkles-outline',
 }: {
   title: string;
   body: string;
   action?: ReactNode;
+  icon?: IoniconName;
 }) {
   return (
     <Card style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name={icon} size={22} color={colors.accentPressed} />
+      </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
       {action}
@@ -552,7 +557,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   buttonPrimary: {
+    backgroundColor: colors.accent,
     overflow: 'hidden',
+    paddingHorizontal: 0,
     ...shadows.sm,
   },
   buttonSecondary: {
@@ -561,6 +568,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   buttonPrimaryFill: {
+    width: '100%',
     minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
@@ -665,6 +673,14 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'flex-start',
+  },
+  emptyIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
   },
   emptyTitle: {
     ...typography.headingLg,

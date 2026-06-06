@@ -28,9 +28,9 @@ function formatQrMeta(session: RecommendationSession): string | null {
 }
 
 function formatHandoffConfidence(label: NonNullable<ReturnType<typeof buildPaymentHandoffPlan>>['confidenceLabel']): string {
-  if (label === 'high confidence') return 'Confianza alta';
+  if (label === 'high confidence') return 'Muy seguro';
   if (label === 'estimated') return 'Estimado';
-  return 'Verificacion manual';
+  return 'Revisalo manual';
 }
 
 export default function ResultsScreen() {
@@ -40,13 +40,13 @@ export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
 
   if (loading) {
-    return <LoadingBlock label="Preparando recomendaciones..." />;
+    return <LoadingBlock label="Buscando con que conviene pagar..." />;
   }
 
   if (!currentSession) {
     return (
       <View style={styles.emptyWrap}>
-        <EmptyState title="Todavia no hay resultados" body="Escanea un QR o elige un comercio y monto para ver el ranking." />
+        <EmptyState title="Todavia no miramos ningun pago" body="Escanea un QR o escribe comercio y monto para saber con que pagar." />
       </View>
     );
   }
@@ -55,6 +55,7 @@ export default function ResultsScreen() {
   const [hero, ...rest] = ranked;
   const heroPresentation = hero ? buildRecommendationPresentation(currentSession, hero) : null;
   const handoffPlan = hero ? buildPaymentHandoffPlan(currentSession, hero) : null;
+  const ownerRoute = currentSession.ownerRoute;
   const qrMeta = formatQrMeta(currentSession);
   const alternativeCount = rest.length;
 
@@ -81,15 +82,16 @@ export default function ResultsScreen() {
 
   return (
     <View style={styles.screen}>
+      <View pointerEvents="none" style={[styles.statusScrim, { height: insets.top + spacing.xs }]} />
       <FlatList
         keyExtractor={(item) => `${item.method.id}-${item.promo.promo_key}`}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
         ListHeaderComponent={
           <View style={styles.headerWrap}>
-            <Text style={styles.kicker}>La mejor forma de pagar ahora</Text>
+            <Text style={styles.kicker}>Paga asi ahora</Text>
             <Text style={styles.merchant}>{currentSession.match.merchant_name}</Text>
             <Text style={styles.amount}>
-              {currentSession.amountEstimated ? 'QR sin monto - ranking estimado' : `${formatArs(currentSession.amountArs)} - ${currentSession.source === 'scan' ? 'QR' : currentSession.source === 'online' ? 'link de pago' : 'manual'}`}
+              {currentSession.amountEstimated ? 'No vi el monto - estimado' : `${formatArs(currentSession.amountArs)} - ${currentSession.source === 'scan' ? 'QR' : currentSession.source === 'online' ? 'link de pago' : 'manual'}`}
             </Text>
             {qrMeta ? <Text style={styles.amount}>{qrMeta}</Text> : null}
 
@@ -104,9 +106,16 @@ export default function ResultsScreen() {
                   },
                 })}
               >
-                <Text style={styles.estimatedTitle}>No habia monto en el QR</Text>
-                <Text style={styles.estimatedBody}>Te muestro la mejor ruta con $45.000 de referencia. Toca aca si quieres ajustar el total.</Text>
+                <Text style={styles.estimatedTitle}>No vi el monto en el QR</Text>
+                <Text style={styles.estimatedBody}>Uso $45.000 para estimar. Toca aca si queres poner el total real.</Text>
               </Pressable>
+            ) : null}
+
+            {ownerRoute ? (
+              <InlineNotice
+                title={`Cobrar ${formatArs(ownerRoute.customerChargeArs)}`}
+                body={`Alias destino: ${ownerRoute.payoutAlias}. El cliente se queda con ${formatArs(ownerRoute.customerDiscountShareArs)} de descuento y Pagamax captura ${formatArs(ownerRoute.ownerCaptureArs)}. Despues abri ${ownerRoute.ownerMethod.label} para pagar el QR original.`}
+              />
             ) : null}
 
             {hero && heroPresentation && handoffPlan ? (
@@ -123,27 +132,27 @@ export default function ResultsScreen() {
                 onPressPrimary={() => void handleOpen()}
               />
             ) : (
-              <EmptyState title="No encontramos opciones elegibles" body="Prueba con otro monto, activa mas medios o corrige el comercio." />
+              <EmptyState title="No encontre una opcion clara" body="Proba otro monto, activa mas medios o corrige el comercio." />
             )}
 
             {handoffPlan ? (
               <InlineNotice
                 title={formatHandoffConfidence(handoffPlan.confidenceLabel)}
-                body={`${handoffPlan.instruction} ${handoffPlan.supportsQrPayload || handoffPlan.supportsAmount ? 'Puede recibir datos del QR.' : 'No envia QR ni monto automaticamente.'}`}
+                body={`${handoffPlan.instruction} ${handoffPlan.supportsQrPayload || handoffPlan.supportsAmount ? 'Puede llevar datos del QR.' : 'No manda QR ni monto solo.'}`}
               />
             ) : null}
 
             {handoffStarted && handoffPlan ? (
               <View style={styles.returnPanel}>
                 <View style={styles.returnCopy}>
-                  <Text style={styles.returnTitle}>Cuando vuelvas</Text>
+                  <Text style={styles.returnTitle}>Cuando termines</Text>
                   <Text style={styles.returnBody}>{handoffPlan.returnInstruction}</Text>
                 </View>
                 <Pressable
                   style={styles.returnButton}
                   onPress={() => router.push({ pathname: '/success', params: { index: '0', simulated: '1' } })}
                 >
-                  <Text style={styles.returnButtonText}>Ya volvi a Pagamax</Text>
+                  <Text style={styles.returnButtonText}>Listo, ya volvi</Text>
                 </Pressable>
               </View>
             ) : null}
@@ -158,8 +167,8 @@ export default function ResultsScreen() {
             {alternativeCount > 0 ? (
               <Pressable onPress={() => setShowAlternatives((prev) => !prev)} style={styles.alternativesToggle}>
                 <View style={styles.alternativesCopy}>
-                  <Text style={styles.alternativesTitle}>Otras opciones ({alternativeCount})</Text>
-                  <Text style={styles.alternativesBody}>Solo si quieres comparar.</Text>
+                  <Text style={styles.alternativesTitle}>Ver otras ({alternativeCount})</Text>
+                  <Text style={styles.alternativesBody}>Para curiosos o desconfiados.</Text>
                 </View>
                 <Text style={styles.alternativesAction}>{showAlternatives ? 'Ocultar' : 'Ver'}</Text>
               </Pressable>
@@ -204,6 +213,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingBottom: spacing.xxl,
     gap: spacing.sm,
+  },
+  statusScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.background,
+    zIndex: 10,
   },
   headerWrap: {
     gap: spacing.md,

@@ -37,6 +37,9 @@ export function buildPaymentHandoffPlan(
   const amount = session.amountEstimated ? undefined : session.amountArs;
   const merchant = session.match.merchant_name || session.merchantInput || 'comercio detectado';
   const hasUsefulDiscount = recommendation.valueType !== 'fallback' && recommendation.estimatedSavingsArs > 0;
+  const ownerRoute = session.ownerRoute && session.ownerRoute.recommendation.method.id === recommendation.method.id
+    ? session.ownerRoute
+    : null;
   const needsManualQrScan = !config.canReceiveQrPayload;
   const confidenceLabel = config.canReceiveQrPayload
     ? 'high confidence'
@@ -47,6 +50,21 @@ export function buildPaymentHandoffPlan(
   const routeCopy = hasUsefulDiscount
     ? `Elegida por ahorro estimado de ${formatArs(recommendation.estimatedSavingsArs)}.`
     : 'Sin descuento confirmado; usa tu metodo configurado por defecto.';
+
+  if (ownerRoute) {
+    return {
+      provider: config.provider,
+      label: config.label,
+      primaryLabel: `Abrir ${config.label}`,
+      confidenceLabel,
+      supportsQrPayload: config.canReceiveQrPayload,
+      supportsAmount: config.canReceiveAmount,
+      needsManualQrScan,
+      instruction: `Primero confirma que el cliente pago ${formatArs(ownerRoute.customerChargeArs)} a ${ownerRoute.payoutAlias}. Despues se abrira ${config.label} para pagar el QR de ${merchant} por ${formatArs(amount)}.`,
+      detail: `Cliente recibe ${formatArs(ownerRoute.customerDiscountShareArs)} de descuento y Pagamax captura ${formatArs(ownerRoute.ownerCaptureArs)}. ${routeCopy} ${config.fallbackBehavior}`,
+      returnInstruction: `Al volver, registra el pago solo si el cliente ya pago ${formatArs(ownerRoute.customerChargeArs)} a ${ownerRoute.payoutAlias} y vos confirmaste el QR en ${config.label}.`,
+    };
+  }
 
   return {
     provider: config.provider,

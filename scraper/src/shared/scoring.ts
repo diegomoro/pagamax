@@ -34,6 +34,11 @@ const ISSUER_RELIABILITY: Record<Issuer, number> = {
   uala:         0.70,
   naranjax:     0.58,
   mercadopago:  0.48,
+  bancor:        0.64,
+  clash:         0.36,
+  ypf:           0.62,
+  shellbox:      0.62,
+  carrefour_bank: 0.66,
 };
 
 // ─── Category average ticket (ARS, March 2026) ───────────────────────────────

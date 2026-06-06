@@ -1,6 +1,9 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Share, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DEMO_ACTIVITY } from '@/lib/demo-data';
 import { buildRecommendationPresentation, summarizeActivity } from '@/lib/experience';
 import { CtaBar } from '@/components/cta-bar';
@@ -9,12 +12,67 @@ import { ScreenScroll, SecondaryButton } from '@/components/ui';
 import { usePagamax } from '@/context/pagamax-context';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
+const PARTICLES = [
+  { left: '12%', delay: 0, drift: -18, color: colors.accent },
+  { left: '22%', delay: 80, drift: 14, color: colors.success },
+  { left: '36%', delay: 30, drift: -10, color: colors.warning },
+  { left: '52%', delay: 110, drift: 18, color: colors.accentPressed },
+  { left: '68%', delay: 50, drift: -14, color: colors.teal },
+  { left: '82%', delay: 130, drift: 10, color: colors.success },
+] as const;
+
+function CelebrationParticles() {
+  const particles = useRef(PARTICLES.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    Animated.stagger(
+      35,
+      particles.map((particle, index) => (
+        Animated.timing(particle, {
+          toValue: 1,
+          duration: 900,
+          delay: PARTICLES[index]!.delay,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        })
+      )),
+    ).start();
+  }, [particles]);
+
+  return (
+    <View pointerEvents="none" style={styles.particleLayer}>
+      {particles.map((particle, index) => {
+        const config = PARTICLES[index]!;
+        return (
+          <Animated.View
+            key={`${config.left}-${config.delay}`}
+            style={[
+              styles.particle,
+              {
+                left: config.left,
+                backgroundColor: config.color,
+                opacity: particle.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.85, 0] }),
+                transform: [
+                  { translateY: particle.interpolate({ inputRange: [0, 1], outputRange: [14, -46] }) },
+                  { translateX: particle.interpolate({ inputRange: [0, 1], outputRange: [0, config.drift] }) },
+                  { scale: particle.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.7, 1, 0.92] }) },
+                ],
+              },
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 export default function SuccessScreen() {
   const params = useLocalSearchParams<{ index?: string; simulated?: string }>();
   const { activity, currentSession, recordSuccessfulRecommendation, settings, toggleSavedMerchant } = usePagamax();
   const hasRecorded = useRef(false);
   const [recordedId, setRecordedId] = useState<string | null>(null);
   const isSimulated = params.simulated === '1';
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (hasRecorded.current) return;
@@ -32,7 +90,11 @@ export default function SuccessScreen() {
   if (!currentSession || !currentSession.recommendations[Number(params.index ?? '0')]) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyTitle}>No hay una ruta para confirmar</Text>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>No hay pago para guardar</Text>
+          <Text style={styles.emptyBody}>Escanea un QR o busca un comercio para guardar una buena decision.</Text>
+          <SecondaryButton onPress={() => router.replace('/scan')}>Escanear QR</SecondaryButton>
+        </View>
       </View>
     );
   }
@@ -44,12 +106,12 @@ export default function SuccessScreen() {
   const presentation = buildRecommendationPresentation(currentSession, recommendation);
   const shareRecommendation = async () => {
     const value = presentation.netSavingsArs > 0
-      ? `me marco una ruta con ahorro estimado de ${presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}`
-      : 'me confirmo la ruta mas simple sin promo confiable';
+      ? `me marco un ahorro estimado de ${presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}`
+      : 'me dijo cual era la opcion simple sin promo segura';
 
     try {
       await Share.share({
-        message: `Antes de pagar en ${currentSession.match.merchant_name}, Paga Menos ${value}. Es una forma tranquila de elegir mejor como pagar.`,
+        message: `Antes de pagar en ${currentSession.match.merchant_name}, Paga Menos ${value}. Dos segundos y quedas como el que sabe pagar.`,
       });
     } catch {
       // Sharing is optional and should not block the success flow.
@@ -59,19 +121,23 @@ export default function SuccessScreen() {
   return (
     <View style={styles.screen}>
       <ScreenScroll contentContainerStyle={styles.content}>
-        <View style={styles.hero}>
-          <Text style={styles.kicker}>{isSimulated ? 'Pago simulado' : 'Pago optimizado'}</Text>
+        <LinearGradient colors={[colors.surfaceElevated, colors.tealSoft]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <CelebrationParticles />
+          <View style={styles.successIcon}>
+            <Ionicons name="checkmark" size={30} color={colors.white} />
+          </View>
+          <Text style={styles.kicker}>{isSimulated ? 'Prueba guardada' : 'Bien elegido'}</Text>
           <Text style={styles.title}>
             {isSimulated
-              ? `Flujo revisado para ${currentSession.match.merchant_name}`
-              : `Paga Menos encontro una ruta clara para ${currentSession.match.merchant_name}`}
+              ? `Ya sabes como pagar en ${currentSession.match.merchant_name}`
+              : 'Buena: miraste antes de pagar'}
           </Text>
           <Text style={styles.subtitle}>
             {isSimulated
-              ? 'No confirma pagos reales. Registra el resultado para validar ahorro, historial y reuso.'
-              : 'Tu decision queda explicada y registrada para que la proxima vez entres mas rapido.'}
+              ? 'No confirma pagos reales. Sirve para revisar el recorrido completo.'
+              : 'Quedo guardado. La proxima vez arrancas con ventaja.'}
           </Text>
-        </View>
+        </LinearGradient>
 
         <RecommendationBreakdown
           grossSavingsArs={presentation.grossSavingsArs}
@@ -81,7 +147,7 @@ export default function SuccessScreen() {
             label: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 'Alta' : 'Media',
             score: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 0.9 : 0.72,
             tone: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 'success' : 'warning',
-            note: 'El resultado queda guardado como referencia para futuros pagos.',
+            note: 'Queda guardado para que la proxima compra sea mas facil.',
           }}
         />
 
@@ -97,27 +163,27 @@ export default function SuccessScreen() {
         </View>
 
         <View style={styles.whyCard}>
-          <Text style={styles.whyTitle}>Por que funciono</Text>
+          <Text style={styles.whyTitle}>Por que era buena idea</Text>
           {presentation.qualifiers.slice(0, 3).map((reason) => (
             <Text key={reason} style={styles.whyText}>+ {reason}</Text>
           ))}
         </View>
 
         <SecondaryButton onPress={() => toggleSavedMerchant(currentSession.match.merchant_name)}>
-          {alreadySaved ? 'Quitar de accesos rapidos' : 'Guardar comercio para reuso rapido'}
+          {alreadySaved ? 'Quitar de accesos rapidos' : 'Guardar este lugar'}
         </SecondaryButton>
 
         <SecondaryButton onPress={() => void shareRecommendation()}>
-          Compartir con alguien
+          Pasarselo a alguien
         </SecondaryButton>
 
-        {recordedId ? <Text style={styles.recorded}>Guardado en tu actividad reciente.</Text> : null}
+        {recordedId ? <Text style={styles.recorded}>Guardado. Ya cuenta para tu historial.</Text> : null}
       </ScreenScroll>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { bottom: insets.bottom + spacing.md }]}>
         <CtaBar
-          title="Sigue con el siguiente pago"
-          primaryLabel="Revisar otro pago"
+          title="Siguiente compra: mirala antes"
+          primaryLabel="Escanear otro pago"
           onPressPrimary={() => router.replace('/scan')}
           secondaryLabel="Volver al inicio"
           onPressSecondary={() => router.replace('/')}
@@ -137,10 +203,29 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   hero: {
-    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.xl,
     padding: spacing.lg,
     gap: spacing.sm,
+    overflow: 'hidden',
+  },
+  particleLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  particle: {
+    position: 'absolute',
+    top: 34,
+    width: 8,
+    height: 18,
+    borderRadius: radius.full,
+  },
+  successIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: radius.full,
+    backgroundColor: colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
   kicker: {
     ...typography.overline,
@@ -207,8 +292,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: spacing.lg,
   },
+  emptyCard: {
+    width: '100%',
+    borderRadius: radius.xl,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
   emptyTitle: {
     ...typography.headingLg,
     color: colors.ink,
+  },
+  emptyBody: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
   },
 });

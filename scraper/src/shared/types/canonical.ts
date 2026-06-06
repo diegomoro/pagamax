@@ -23,7 +23,9 @@ export type Issuer =
   | 'cuentadni'
   | 'ypf'
   | 'shellbox'
-  | 'carrefour_bank';
+  | 'carrefour_bank'
+  | 'bancor'
+  | 'clash';
 
 export type DiscountType =
   | 'direct_discount'   // applied at POS instantly (MP, Carrefour QR)

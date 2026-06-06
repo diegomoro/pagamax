@@ -78,7 +78,7 @@ export interface MpVdpResponse {
   additional_info?: {
     title?: string;
     disclaimer?: string;
-    conditions?: string[];
+    conditions?: Array<{ id: string; key: string; value: unknown }>;
     link?: {
       text?: string;
       type?: string;

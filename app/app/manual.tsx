@@ -55,7 +55,7 @@ export default function ManualEntryScreen() {
       triggerHaptic(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
       router.replace('/results');
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'No se pudo generar la recomendacion.';
+      const message = caught instanceof Error ? caught.message : 'No se pudo calcular con que pagar.';
       Alert.alert('Error', message);
     }
   };
@@ -66,12 +66,12 @@ export default function ManualEntryScreen() {
         <View style={styles.topBar}>
           <IconButton icon="arrow-back" onPress={() => router.back()} />
         </View>
-        <PageTitle title="Buscar comercio y monto" subtitle="Ingresa el total y elige el comercio para ver con que medio te conviene pagar menos." />
+        <PageTitle title="Decime donde y cuanto" subtitle="Si no tenes QR, escribi el comercio y el total. Te digo con que pagar." />
 
         {pendingScan && !allowOverride ? (
           <InlineNotice
             title="Comercio detectado"
-            body={`Ya detectamos ${pendingScan.match.merchant_name}. Solo falta el monto para ordenar las mejores opciones.`}
+            body={`Ya vimos ${pendingScan.match.merchant_name}. Solo falta el monto para decirte con que pagar.`}
           />
         ) : null}
 
@@ -135,8 +135,8 @@ export default function ManualEntryScreen() {
       </ScreenScroll>
 
       <StickyButton
-        label="Ver mejores opciones"
-        preview={canSubmit ? `Calcular para ${merchantInput.trim()} por ${formatArs(amountArs ?? 0)}` : 'Completa monto y comercio para continuar'}
+        label="Decime con que pagar"
+        preview={canSubmit ? `${merchantInput.trim()} por ${formatArs(amountArs ?? 0)}` : 'Completa monto y comercio'}
         disabled={!canSubmit}
         onPress={() => void submit()}
       />

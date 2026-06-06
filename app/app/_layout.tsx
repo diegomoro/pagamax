@@ -45,6 +45,13 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="account"
+            options={{
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
             name="results"
             options={{
               animation: 'slide_from_right',

@@ -105,6 +105,17 @@ export interface PaymentMethodProfile {
   cardBrand?: string;
   cardType?: FundingType;
   isDefault?: boolean;
+  enabled?: boolean;
+  ownerPhone?: boolean;
+  canPayMerchantQr?: boolean;
+  canReceiveCustomerTransfer?: boolean;
+  receivingAlias?: string | null;
+  receivingPriority?: number;
+  availableBalanceArs?: number | null;
+  creditAvailableArs?: number | null;
+  qrTransferLimitRemainingArs?: number | null;
+  promoCapRemainingArs?: number | null;
+  restrictions?: string[];
 }
 
 export interface PromoCandidate {
@@ -129,4 +140,33 @@ export interface PaymentRecommendation {
   rankingScore: number;
   reasons: string[];
   warnings: string[];
+}
+
+export interface PagamaxOwnerRoute {
+  recommendation: PaymentRecommendation;
+  ownerMethod: PaymentMethodProfile;
+  payoutMethod: PaymentMethodProfile;
+  payoutAlias: string;
+  originalAmountArs: number;
+  customerChargeArs: number;
+  ownerPaysMerchantArs: number;
+  grossDiscountArs: number;
+  customerDiscountShareArs: number;
+  ownerCaptureArs: number;
+  ownerNetValueArs: number;
+  eligibilityWarnings: string[];
+}
+
+export interface PagamaxRoutingInput {
+  amountArs: number;
+  ownerMethods: PaymentMethodProfile[];
+  candidates: PromoCandidate[];
+  customerMethods?: PaymentMethodProfile[];
+  topN?: number;
+}
+
+export interface PagamaxRoutingResult {
+  ownerRoute: PagamaxOwnerRoute | null;
+  ownerRouteCandidates: PagamaxOwnerRoute[];
+  customerRecommendations: PaymentRecommendation[];
 }

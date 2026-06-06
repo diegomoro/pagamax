@@ -154,9 +154,9 @@ async function main(): Promise<void> {
     byChannel[p.channel]             = (byChannel[p.channel]             ?? 0) + 1;
     byInstrument[p.instrument_required] = (byInstrument[p.instrument_required] ?? 0) + 1;
 
-    if (p.confidence_score >= 0.85)      byConfidence.high++;
-    else if (p.confidence_score >= 0.60) byConfidence.medium++;
-    else                                  byConfidence.low++;
+    if (p.confidence_score >= 0.85)      byConfidence.high = (byConfidence.high ?? 0) + 1;
+    else if (p.confidence_score >= 0.60) byConfidence.medium = (byConfidence.medium ?? 0) + 1;
+    else                                  byConfidence.low = (byConfidence.low ?? 0) + 1;
 
     if (!p.valid_from)           missingFrom++;
     if (!p.valid_to)             missingTo++;

@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandLockup } from '@/components/brand-lockup';
 import { IconButton, PrimaryButton, SecondaryButton } from '@/components/ui';
-import { ScanOverlay } from '@/components/scan-overlay';
+import { ScanOverlay, type ScanPhase } from '@/components/scan-overlay';
 import { usePagamax } from '@/context/pagamax-context';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
@@ -23,20 +23,30 @@ export default function ScanScreen() {
   const [pasteValue, setPasteValue] = useState('');
   const [showPaste, setShowPaste] = useState(false);
   const [feedback, setFeedback] = useState<'success' | 'error' | null>(null);
+  const [scanPhase, setScanPhase] = useState<ScanPhase>('scanning');
   const insets = useSafeAreaInsets();
 
   const continueWithPayload = async (payload: string) => {
     try {
-      runScanRecommendation(payload);
       setLocked(true);
+      setScanPhase('detected');
+      await new Promise((resolve) => setTimeout(resolve, 90));
+      setScanPhase('calculating');
+      runScanRecommendation(payload);
       setFeedback('success');
+      setScanPhase('ready');
       triggerHaptic(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
+      await new Promise((resolve) => setTimeout(resolve, 110));
       router.replace('/results');
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo interpretar el QR.';
       setFeedback('error');
+      setScanPhase('error');
       triggerHaptic(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
-      setTimeout(() => setFeedback(null), 450);
+      setTimeout(() => {
+        setFeedback(null);
+        setScanPhase('scanning');
+      }, 650);
       Alert.alert('QR invalido', message);
       setLocked(false);
     }
@@ -71,7 +81,7 @@ export default function ScanScreen() {
         onBarcodeScanned={onBarcodeScanned}
       />
 
-      <ScanOverlay success={feedback === 'success'} error={feedback === 'error'} />
+      <ScanOverlay success={feedback === 'success'} error={feedback === 'error'} phase={scanPhase} />
 
       {feedback ? <View style={[styles.flash, feedback === 'success' ? styles.flashSuccess : styles.flashError]} /> : null}
 
@@ -83,11 +93,11 @@ export default function ScanScreen() {
         <BrandLockup compact showTagline={false} />
       </View>
 
-      <View style={styles.bottomCard}>
-        <Text style={styles.scanHint}>Apunta al QR. Te damos la ruta en segundos.</Text>
+      <View style={[styles.bottomCard, { bottom: insets.bottom + spacing.lg }]}>
+        <Text style={styles.scanHint}>Apunta al QR. Te decimos con que pagar.</Text>
 
         <Pressable hitSlop={12} onPress={() => router.replace('/manual')}>
-          <Text style={styles.bottomLink}>No ves el QR? Busca el comercio</Text>
+          <Text style={styles.bottomLink}>No ves el QR? Escribi el comercio</Text>
         </Pressable>
 
         {settings.debugEnabled ? (
@@ -133,7 +143,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 56,
     left: 72,
-    right: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255, 250, 242, 0.74)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     zIndex: 20,
     elevation: 20,
   },

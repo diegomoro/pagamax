@@ -1,10 +1,52 @@
 import * as cheerio from 'cheerio';
+import type { Page } from 'playwright';
 import { sha256Hex } from '../../shared/utils/hash.js';
 import type { FetchResult, RawPromotionCandidate } from '../../shared/types/raw.js';
 import { NARANJAX_CONFIG } from './config.js';
 import { createLogger } from '../../core/logging/logger.js';
 
 const log = createLogger({ issuerCode: NARANJAX_CONFIG.issuerCode, phase: 'extractDetail' });
+
+export interface DetailPageData {
+  title: string;
+  paymentMethods: string[];
+  capText?: string;
+  minPurchaseText?: string;
+  expirationText?: string;
+  stackableText?: string;
+  planTypeText?: string;
+  exclusionTexts?: string[];
+  refundText?: string;
+  scopeText?: string;
+}
+
+export async function extractDetailPageData(page: Page): Promise<DetailPageData | null> {
+  const html = await page.content();
+  const fetchResult: FetchResult = {
+    url: page.url(),
+    finalUrl: page.url(),
+    html,
+    statusCode: 200,
+    fetchedAt: new Date(),
+    fetchMethod: 'playwright',
+  };
+  const [candidate] = extractDetailCandidates(fetchResult);
+  if (!candidate) return null;
+
+  const data: DetailPageData = {
+    title: candidate.title,
+    paymentMethods: candidate.paymentMethodText,
+  };
+  if (candidate.capText) data.capText = candidate.capText;
+  if (candidate.minPurchaseText) data.minPurchaseText = candidate.minPurchaseText;
+  if (candidate.expirationText) data.expirationText = candidate.expirationText;
+  if (candidate.stackableText) data.stackableText = candidate.stackableText;
+  if (candidate.planTypeText) data.planTypeText = candidate.planTypeText;
+  if (candidate.exclusionTexts?.length) data.exclusionTexts = candidate.exclusionTexts;
+  if (candidate.refundText) data.refundText = candidate.refundText;
+  if (candidate.scopeText) data.scopeText = candidate.scopeText;
+  return data;
+}
 
 /**
  * extractDetailCandidates

@@ -40,7 +40,8 @@
           "cameraPermission": "Paga Menos usa la camara para escanear codigos QR de comercios."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-font"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

@@ -40,7 +40,7 @@ export default function CheckoutLinkScreen() {
           <IconButton icon="arrow-back" onPress={() => router.back()} />
         </View>
 
-        <PageTitle title="Pegar link de pago" subtitle="Usa esta ruta para compras online donde quieras comparar antes de pagar." />
+        <PageTitle title="Pegar link de pago" subtitle="Para compras online: pega el link, pone el monto y mira con que conviene pagar." />
 
         <View style={styles.card}>
           <Text style={styles.label}>URL del link de pago</Text>
@@ -78,8 +78,8 @@ export default function CheckoutLinkScreen() {
       </ScreenScroll>
 
       <StickyButton
-        label="Ver mejor ruta"
-        preview={canSubmit ? `Buscar mejor ruta para ${effectiveMerchant}` : 'Pega un link de pago, comercio y monto'}
+        label="Decime con que pagar"
+        preview={canSubmit ? `Mirar ${effectiveMerchant}` : 'Pega link, comercio y monto'}
         disabled={!canSubmit}
         onPress={submit}
       />

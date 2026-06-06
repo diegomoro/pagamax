@@ -1,4 +1,4 @@
-import type { MatchResult, PaymentMethodProfile, PaymentRecommendation } from '@pagamax/core';
+import type { MatchResult, PagamaxOwnerRoute, PaymentMethodProfile, PaymentRecommendation } from '@pagamax/core';
 
 export type RecommendationSource = 'manual' | 'scan' | 'online';
 export type OptimizationMode = 'max_savings' | 'fastest_checkout';
@@ -6,6 +6,17 @@ export type ConfidenceTone = 'success' | 'warning' | 'default';
 
 export interface StoredPaymentMethod extends PaymentMethodProfile {
   enabled: boolean;
+}
+
+export interface BetaAccount {
+  id: string;
+  email: string;
+  displayName: string;
+  phoneLabel?: string;
+  inviteCode?: string;
+  createdAt: string;
+  updatedAt: string;
+  syncStatus: 'local_only' | 'pending_backend' | 'synced';
 }
 
 export interface ConfidenceInfo {
@@ -45,6 +56,7 @@ export interface RecommendationSession {
   checkoutUrl?: string;
   match: MatchResult;
   recommendations: PaymentRecommendation[];
+  ownerRoute?: PagamaxOwnerRoute | null;
   createdAt: string;
 }
 
@@ -67,6 +79,9 @@ export interface MerchantOpportunity {
   id: string;
   merchantName: string;
   category: string;
+  placement?: 'best_match' | 'sponsored';
+  placementLabel?: string;
+  placementReason?: string;
   likelyGrossSavingsArs: number;
   likelyNetSavingsArs: number;
   confidence: ConfidenceInfo;

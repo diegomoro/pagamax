@@ -3,7 +3,7 @@ import {
   getMatchedCandidates,
   matchMerchantName,
   matchQr,
-  recommendPaymentOptions,
+  recommendPagamaxRoutes,
   type MatchResult,
   type PaymentMethodProfile,
   type PromoIndex,
@@ -18,6 +18,7 @@ import { STORAGE_KEYS } from '@/lib/storage';
 import type { HandoffOutcome } from '@/lib/handoff';
 import type {
   AppSettings,
+  BetaAccount,
   DiagnosticsEvent,
   PendingScan,
   PromoDataStatus,
@@ -37,6 +38,7 @@ interface PagamaxContextValue {
   methods: StoredPaymentMethod[];
   activeMethodsCount: number;
   settings: AppSettings;
+  account: BetaAccount | null;
   pendingScan: PendingScan | null;
   currentSession: RecommendationSession | null;
   activity: SavingsActivity[];
@@ -48,6 +50,8 @@ interface PagamaxContextValue {
   updateMethod: (id: string, patch: Partial<StoredPaymentMethod>) => void;
   resetMethods: () => Promise<void>;
   updateSettings: (patch: Partial<AppSettings>) => void;
+  createAccount: (input: { email: string; displayName: string; phoneLabel?: string; inviteCode?: string }) => Promise<BetaAccount>;
+  signOutAccount: () => Promise<void>;
   completeOnboarding: (patch?: Partial<AppSettings>) => void;
   toggleSavedMerchant: (merchantName: string) => void;
   prepareScan: (payload: string) => MatchResult;
@@ -93,7 +97,7 @@ const SCAN_REFERENCE_AMOUNT_ARS = 45000;
 const FALLBACK_PROMO_BASE: PromoSummary = {
   promo_key: 'fallback-payment-route',
   issuer: 'pagamenos',
-  merchant_name: 'Ruta de pago disponible',
+  merchant_name: 'Opcion simple disponible',
   category: 'General',
   discount_type: 'none',
   discount_percent: null,
@@ -112,19 +116,22 @@ const FALLBACK_PROMO_BASE: PromoSummary = {
   valid_from: '',
   valid_to: '',
   freshness_status: 'fallback',
-  promo_title: 'Sin descuento confirmado',
-  description_short: 'Paga con una ruta disponible y revisa si tu billetera o banco muestra puntos, cuotas o reintegros antes de confirmar.',
+  promo_title: 'Sin promo segura',
+  description_short: 'Paga con una opcion disponible y revisa si tu billetera o banco muestra puntos, cuotas o reintegros antes de confirmar.',
 };
 
 const USER_METHOD_SEED_IDS = new Set([
-  'mercadopago-balance-qr',
-  'naranjax-balance-qr',
+  'carrefour-bank-qr',
+  'bancon-wallet-qr',
+  'personalpay-prepaid-qr',
+  'bna-plus-wallet-qr',
+  'shellbox-wallet-qr',
+  'ypf-app-wallet-qr',
   'bbva-mastercard-black-qr',
   'bbva-visa-signature-qr',
-  'carrefour-bank-qr',
-  'bna-plus-qr',
-  'bancon-debit-qr',
-  'personalpay-prepaid-qr',
+  'bbva-debit-qr',
+  'mercadopago-balance-qr',
+  'naranjax-balance-qr',
 ]);
 
 const LEGACY_DEMO_METHOD_IDS = new Set([
@@ -164,6 +171,10 @@ async function persistMethods(methods: StoredPaymentMethod[]): Promise<void> {
 
 async function persistSettings(settings: AppSettings): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+}
+
+async function persistAccount(account: BetaAccount): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.account, JSON.stringify(account));
 }
 
 async function persistActivity(activity: SavingsActivity[]): Promise<void> {
@@ -216,11 +227,11 @@ function buildFallbackRecommendations(
       rankingScore: -index,
       reasons: [
         `Usa ${method.label}`,
-        'No hay descuento confirmado para este comercio en el snapshot actual',
+        'No hay descuento confirmado para este comercio en la base actual',
         'Revisa la pantalla final de la billetera antes de confirmar el pago',
       ],
       warnings: [
-        'No hay una promo elegible confirmada; esta es una ruta disponible, no una promesa de ahorro',
+        'No hay una promo confirmada; esta es una opcion disponible, no una promesa de ahorro',
       ],
     }));
 }
@@ -242,6 +253,15 @@ function isLocalWebPreview(): boolean {
     && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 }
 
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function makeAccountId(email: string): string {
+  const suffix = Math.random().toString(36).slice(2, 10);
+  return `local_${Date.now().toString(36)}_${suffix}_${email.replace(/[^a-z0-9]/g, '').slice(0, 12)}`;
+}
+
 export function PagamaxProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -249,6 +269,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
   const [merchantOptions, setMerchantOptions] = useState<MerchantOption[]>([]);
   const [methods, setMethods] = useState<StoredPaymentMethod[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [account, setAccount] = useState<BetaAccount | null>(null);
   const [pendingScan, setPendingScan] = useState<PendingScan | null>(null);
   const [currentSession, setCurrentSession] = useState<RecommendationSession | null>(null);
   const [activity, setActivity] = useState<SavingsActivity[]>([]);
@@ -324,7 +345,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
       if (result.status.lastSyncStatus === 'updated') {
         setPromoIndex(result.promoIndex);
         deferMerchantOptionsBuild(result.promoIndex, setMerchantOptions);
-        appendDiagnostic('data', 'info', 'Se descargo un snapshot nuevo', `version=${result.status.localVersion ?? 'sin-version'}`);
+        appendDiagnostic('data', 'info', 'Se descargo una base nueva', `version=${result.status.localVersion ?? 'sin-version'}`);
       } else {
         appendDiagnostic('data', 'info', 'Los descuentos remotos ya estaban al dia', `version=${result.status.localVersion ?? 'sin-version'}`);
       }
@@ -358,10 +379,11 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const [promoLoadResult, storedMethodsRaw, storedSettingsRaw, storedActivityRaw, storedDiagnosticsRaw] = await Promise.all([
+      const [promoLoadResult, storedMethodsRaw, storedSettingsRaw, storedAccountRaw, storedActivityRaw, storedDiagnosticsRaw] = await Promise.all([
         loadInitialPromoIndex(),
         AsyncStorage.getItem(STORAGE_KEYS.methods),
         AsyncStorage.getItem(STORAGE_KEYS.settings),
+        AsyncStorage.getItem(STORAGE_KEYS.account),
         AsyncStorage.getItem(STORAGE_KEYS.activity),
         AsyncStorage.getItem(STORAGE_KEYS.diagnostics),
       ]);
@@ -381,6 +403,11 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
         ? mergeSettings(DEFAULT_SETTINGS, JSON.parse(storedSettingsRaw) as AppSettings)
         : DEFAULT_SETTINGS;
       setSettings(hydratedSettings);
+
+      const hydratedAccount = storedAccountRaw
+        ? JSON.parse(storedAccountRaw) as BetaAccount
+        : null;
+      setAccount(hydratedAccount);
 
       const hydratedActivity = storedActivityRaw
         ? JSON.parse(storedActivityRaw) as SavingsActivity[]
@@ -417,12 +444,20 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
   ) {
     if (!promoIndex) throw new Error('Promo index is not loaded');
 
-    let recommendations = recommendPaymentOptions({
+    const routePlan = recommendPagamaxRoutes({
       amountArs,
-      methods: activeMethods,
+      ownerMethods: activeMethods,
+      customerMethods: activeMethods,
       candidates: getMatchedCandidates(match),
       topN: 5,
     });
+
+    let recommendations = routePlan.ownerRoute
+      ? [
+          routePlan.ownerRoute.recommendation,
+          ...routePlan.customerRecommendations.filter((recommendation) => recommendation.method.id !== routePlan.ownerRoute?.ownerMethod.id),
+        ].slice(0, 5)
+      : routePlan.customerRecommendations;
 
     if (recommendations.length === 0) {
       recommendations = buildFallbackRecommendations(activeMethods, amountArs, merchantInput, 5);
@@ -437,6 +472,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
       checkoutUrl: metadata?.checkoutUrl,
       match,
       recommendations,
+      ownerRoute: routePlan.ownerRoute,
       createdAt: new Date().toISOString(),
     };
 
@@ -445,7 +481,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
       'session',
       recommendations.length > 0 ? 'info' : 'warning',
       `Sesion ${source} creada para ${merchantInput}`,
-      `match=${match.match_method} recomendaciones=${recommendations.length} estimated=${metadata?.amountEstimated ? 'yes' : 'no'}`,
+      `match=${match.match_method} opciones=${recommendations.length} owner_route=${routePlan.ownerRoute ? 'yes' : 'no'} estimated=${metadata?.amountEstimated ? 'yes' : 'no'}`,
     );
     return session;
   }
@@ -478,6 +514,36 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
       void persistSettings(next);
       return next;
     });
+  }
+
+  async function createAccount(input: { email: string; displayName: string; phoneLabel?: string; inviteCode?: string }) {
+    const email = normalizeEmail(input.email);
+    const displayName = input.displayName.trim();
+    const now = new Date().toISOString();
+    const next: BetaAccount = {
+      id: account?.id ?? makeAccountId(email),
+      email,
+      displayName,
+      createdAt: account?.createdAt ?? now,
+      updatedAt: now,
+      syncStatus: 'local_only',
+    };
+
+    const phoneLabel = input.phoneLabel?.trim();
+    const inviteCode = input.inviteCode?.trim();
+    if (phoneLabel) next.phoneLabel = phoneLabel;
+    if (inviteCode) next.inviteCode = inviteCode;
+
+    setAccount(next);
+    await persistAccount(next);
+    appendDiagnostic('session', 'info', account ? 'Cuenta beta actualizada' : 'Cuenta beta creada', `email=${email}`);
+    return next;
+  }
+
+  async function signOutAccount() {
+    setAccount(null);
+    await AsyncStorage.removeItem(STORAGE_KEYS.account);
+    appendDiagnostic('session', 'info', 'Cuenta beta cerrada localmente');
   }
 
   function completeOnboarding(patch: Partial<AppSettings> = {}) {
@@ -575,7 +641,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     if (!currentSession) throw new Error('No hay una sesion activa para registrar.');
 
     const recommendation = currentSession.recommendations[recommendationIndex];
-    if (!recommendation) throw new Error('No existe la recomendacion seleccionada.');
+    if (!recommendation) throw new Error('No existe la opcion seleccionada.');
 
     const item = buildActivityFromSession(currentSession, recommendation);
     setActivity((prev) => {
@@ -598,6 +664,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     methods,
     activeMethodsCount: activeMethods.length,
     settings,
+    account,
     pendingScan,
     currentSession,
     activity,
@@ -609,6 +676,8 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     updateMethod,
     resetMethods,
     updateSettings,
+    createAccount,
+    signOutAccount,
     completeOnboarding,
     toggleSavedMerchant,
     prepareScan,
@@ -620,6 +689,7 @@ export function PagamaxProvider({ children }: { children: ReactNode }) {
     recordSuccessfulRecommendation,
   }), [
     activeMethods.length,
+    account,
     activity,
     currentSession,
     diagnostics,

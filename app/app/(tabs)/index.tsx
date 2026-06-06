@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DEMO_ACTIVITY, DEMO_REPEAT_MERCHANTS } from '@/lib/demo-data';
+import { DEMO_ACTIVITY, DEMO_OPPORTUNITIES, DEMO_REPEAT_MERCHANTS } from '@/lib/demo-data';
 import { BottomSheet, IconButton, InlineNotice, LoadingBlock, SecondaryButton, ToggleRow } from '@/components/ui';
 import { BrandLockup } from '@/components/brand-lockup';
 import { usePagamax } from '@/context/pagamax-context';
@@ -26,12 +26,35 @@ export default function HomeScreen() {
   } = usePagamax();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const insets = useSafeAreaInsets();
+  const scanPulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!loading && !settings.onboardingCompleted) {
       router.replace('/onboarding');
     }
   }, [loading, settings.onboardingCompleted]);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanPulse, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanPulse, {
+          toValue: 0,
+          duration: 1500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      { iterations: 4 },
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scanPulse]);
 
   const quickMerchantNames = useMemo(() => (
     Array.from(new Set([
@@ -43,6 +66,7 @@ export default function HomeScreen() {
   ), [activity, settings.savedMerchants]);
   const hasRealActivity = activity.length > 0;
   const summary = useMemo(() => summarizeActivity(activity), [activity]);
+  const displaySummary = useMemo(() => summarizeActivity(hasRealActivity ? activity : DEMO_ACTIVITY), [activity, hasRealActivity]);
   const checksThisMonth = useMemo(() => {
     const month = new Date().getMonth();
     const year = new Date().getFullYear();
@@ -51,16 +75,33 @@ export default function HomeScreen() {
       return date.getMonth() === month && date.getFullYear() === year;
     }).length;
   }, [activity]);
+  const monthlyGoalArs = 25000;
+  const goalProgress = Math.min(1, displaySummary.monthlyNetSavingsArs / monthlyGoalArs);
+  const smartStreak = hasRealActivity ? Math.min(7, Math.max(1, checksThisMonth)) : 3;
+  const bestNearbyPromo = DEMO_OPPORTUNITIES.find((item) => item.placement !== 'sponsored') ?? DEMO_OPPORTUNITIES[0];
+  const merchantSpotlight = DEMO_OPPORTUNITIES.find((item) => item.placement === 'sponsored');
 
   const sharePagamax = async () => {
     try {
       await Share.share({
-        message: 'Antes de pagar, escaneo el QR con Paga Menos y me dice que medio conviene. Simple y sin tocar el pago final.',
+        message: 'Yo antes de pagar escaneo con Paga Menos. Me dice con que app o tarjeta conviene pagar y despues confirmo yo.',
       });
     } catch {
       // Sharing is optional; the home screen should stay quiet if the sheet fails.
     }
   };
+  const scanLift = scanPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -5],
+  });
+  const haloOpacity = scanPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.18, 0.38],
+  });
+  const haloScale = scanPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.98, 1.04],
+  });
 
   if (loading) {
     return <LoadingBlock label="Cargando Paga Menos..." />;
@@ -77,7 +118,11 @@ export default function HomeScreen() {
 
   return (
     <>
-      <View style={[styles.screen, { paddingTop: insets.top + spacing.sm }]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.screen, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 128 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.topBar}>
           <BrandLockup compact showTagline={false} />
           <View style={styles.topActions}>
@@ -89,33 +134,93 @@ export default function HomeScreen() {
         <View style={styles.heroArea}>
           <View style={styles.habitCue}>
             <Text style={styles.habitTitle}>Antes de pagar, escanea.</Text>
-            <Text style={styles.habitBody}>Te dice la ruta mas inteligente sin confirmar nada por vos.</Text>
+            <Text style={styles.habitBody}>Te digo con que app o tarjeta conviene. Vos confirmas el pago.</Text>
           </View>
 
-          <Pressable onPress={() => router.push('/scan')} style={({ pressed }) => [styles.scanCard, pressed && styles.scanCardPressed]}>
-            <LinearGradient colors={[colors.accent, colors.teal]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scanFill}>
-              <View style={styles.scanIconWrap}>
-                <Ionicons name="qr-code-outline" size={42} color={colors.teal} />
-              </View>
-              <Text style={styles.scanLabel}>Escanear QR</Text>
-              <Text style={styles.scanMeta}>La mejor forma de pagar, en segundos</Text>
-            </LinearGradient>
-          </Pressable>
+          <Animated.View style={[styles.scanMotionWrap, { transform: [{ translateY: scanLift }] }]}>
+            <Animated.View style={[styles.scanHalo, { opacity: haloOpacity, transform: [{ scale: haloScale }] }]} />
+            <Pressable onPress={() => router.push('/scan')} style={({ pressed }) => [styles.scanCard, pressed && styles.scanCardPressed]}>
+              <LinearGradient colors={[colors.accent, colors.teal]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scanFill}>
+                <View style={styles.liveRow}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>Mostrame el QR</Text>
+                </View>
+                <View style={styles.scanIconWrap}>
+                  <Ionicons name="qr-code-outline" size={42} color={colors.teal} />
+                </View>
+                <Text style={styles.scanLabel}>Escanear QR</Text>
+                <Text style={styles.scanMeta}>En segundos sabes con que pagar</Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
+
+          <View style={styles.trustRow}>
+            <View style={styles.trustItem}>
+              <Ionicons name="shield-checkmark-outline" size={15} color={colors.accentPressed} />
+              <Text style={styles.trustText}>No paga por vos</Text>
+            </View>
+            <View style={styles.trustItem}>
+              <Ionicons name="pricetag-outline" size={15} color={colors.accentPressed} />
+              <Text style={styles.trustText}>Promos claras</Text>
+            </View>
+            <View style={styles.trustItem}>
+              <Ionicons name="megaphone-outline" size={15} color={colors.warning} />
+              <Text style={styles.trustText}>Pagos marcados</Text>
+            </View>
+          </View>
 
           <View style={styles.advantageCard}>
             <View style={styles.advantageItem}>
-              <Text style={styles.advantageValue}>{hasRealActivity ? formatArs(summary.monthlyNetSavingsArs) : '1 paso'}</Text>
-              <Text style={styles.advantageLabel}>{hasRealActivity ? 'neto este mes' : 'antes de pagar'}</Text>
+              <Text style={styles.advantageValue}>{hasRealActivity ? formatArs(summary.monthlyNetSavingsArs) : formatArs(displaySummary.monthlyNetSavingsArs)}</Text>
+              <Text style={styles.advantageLabel}>{hasRealActivity ? 'para vos este mes' : 'podrias guardar'}</Text>
             </View>
             <View style={styles.advantageDivider} />
             <View style={styles.advantageItem}>
               <Text style={styles.advantageValue}>{hasRealActivity ? checksThisMonth : '3'}</Text>
-              <Text style={styles.advantageLabel}>{hasRealActivity ? 'checks utiles' : 'categorias clave'}</Text>
+              <Text style={styles.advantageLabel}>{hasRealActivity ? 'veces que miraste' : 'compras tipicas'}</Text>
             </View>
           </View>
 
+          <View style={styles.momentumCard}>
+            <View style={styles.momentumHeader}>
+              <View style={styles.momentumIcon}>
+                <Ionicons name="flame-outline" size={18} color={colors.warning} />
+              </View>
+              <View style={styles.momentumCopy}>
+                <Text style={styles.momentumTitle}>Pagando con cabeza</Text>
+                <Text style={styles.momentumBody}>{smartStreak} pagos mirados antes de elegir. Objetivo: quedarte con {formatArs(monthlyGoalArs)}.</Text>
+              </View>
+              <Text style={styles.momentumPercent}>{Math.round(goalProgress * 100)}%</Text>
+            </View>
+            <View style={styles.goalTrack}>
+              <View style={[styles.goalFill, { width: `${Math.max(8, Math.round(goalProgress * 100))}%` }]} />
+            </View>
+          </View>
+
+          {bestNearbyPromo ? (
+            <Pressable
+              style={styles.promoCard}
+              onPress={() => router.push({ pathname: '/manual', params: { merchant: bestNearbyPromo.merchantName } })}
+            >
+              <View style={styles.promoHeader}>
+                <View>
+                  <Text style={styles.promoKicker}>Puede convenirte ahora</Text>
+                  <Text style={styles.promoTitle}>{bestNearbyPromo.merchantName}</Text>
+                </View>
+                <Text style={styles.promoValue}>{formatArs(bestNearbyPromo.likelyNetSavingsArs)}</Text>
+              </View>
+              <Text style={styles.promoReason}>{bestNearbyPromo.placementReason ?? bestNearbyPromo.reason}</Text>
+              {merchantSpotlight ? (
+                <View style={styles.sponsoredLine}>
+                  <Ionicons name="megaphone-outline" size={14} color={colors.warning} />
+                  <Text style={styles.sponsoredText}>Pagado: {merchantSpotlight.merchantName}. Solo aparece separado y marcado, para no mezclarlo con el mejor ahorro.</Text>
+                </View>
+              ) : null}
+            </Pressable>
+          ) : null}
+
           <View style={styles.secondaryArea}>
-            <SecondaryButton onPress={() => router.push('/manual')}>Buscar comercio</SecondaryButton>
+            <SecondaryButton onPress={() => router.push('/manual')}>No tengo QR</SecondaryButton>
             <Pressable onPress={() => router.push('/checkout-link')}>
               <Text style={styles.linkAction}>Pegar link de pago</Text>
             </Pressable>
@@ -123,14 +228,14 @@ export default function HomeScreen() {
 
           {currentSession ? (
             <Pressable style={styles.resumeCard} onPress={() => router.push('/results')}>
-              <Text style={styles.resumeLabel}>Ultimo check</Text>
+              <Text style={styles.resumeLabel}>Ultima compra mirada</Text>
               <Text numberOfLines={1} style={styles.resumeMerchant}>{currentSession.match.merchant_name}</Text>
             </Pressable>
           ) : null}
 
           {!currentSession && quickMerchantNames.length > 0 ? (
             <View style={styles.quickArea}>
-              <Text style={styles.quickLabel}>Atajos frecuentes</Text>
+              <Text style={styles.quickLabel}>Lugares que sueles mirar</Text>
               <View style={styles.quickRow}>
                 {quickMerchantNames.map((merchant) => (
                   <Pressable
@@ -147,10 +252,10 @@ export default function HomeScreen() {
 
           <Pressable style={styles.shareNudge} onPress={() => void sharePagamax()}>
             <Ionicons name="people-outline" size={18} color={colors.accentPressed} />
-            <Text style={styles.shareNudgeText}>Ayudar a alguien a pagar mejor</Text>
+            <Text style={styles.shareNudgeText}>Pasarselo a alguien que siempre paga de mas</Text>
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
 
       <BottomSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} title="Centro de control">
         <ToggleRow
@@ -161,7 +266,7 @@ export default function HomeScreen() {
         />
         <ToggleRow
           title="Modo de optimizacion"
-          body={settings.optimizationMode === 'max_savings' ? 'Prioriza mas ahorro.' : 'Prioriza menos pasos.'}
+          body={settings.optimizationMode === 'max_savings' ? 'Busca mas plata para vos.' : 'Busca menos vueltas.'}
           value={settings.optimizationMode === 'fastest_checkout'}
           onValueChange={(value) => updateSettings({ optimizationMode: value ? 'fastest_checkout' : 'max_savings' })}
         />
@@ -174,12 +279,14 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: 128,
-    gap: spacing.lg,
+    gap: spacing.md,
+    minHeight: '100%',
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
   errorWrap: {
     flex: 1,
@@ -193,14 +300,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    minHeight: 48,
+    zIndex: 2,
   },
   topActions: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
   heroArea: {
-    flex: 1,
-    justifyContent: 'center',
+    flexGrow: 1,
+    justifyContent: 'flex-start',
     gap: spacing.md,
   },
   habitCue: {
@@ -221,17 +330,53 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.lg,
   },
+  scanMotionWrap: {
+    position: 'relative',
+  },
+  scanHalo: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    top: spacing.md,
+    bottom: spacing.md,
+    borderRadius: radius.xl,
+    backgroundColor: colors.accent,
+  },
   scanCardPressed: {
     transform: [{ scale: 0.985 }],
   },
   scanFill: {
-    minHeight: 292,
+    minHeight: 268,
     borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
+  },
+  liveRow: {
+    position: 'absolute',
+    top: spacing.md,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: radius.full,
+    backgroundColor: colors.whiteSoft,
+  },
+  liveText: {
+    ...typography.caption,
+    color: colors.whiteSoft,
   },
   scanIconWrap: {
     width: 88,
@@ -250,6 +395,27 @@ const styles = StyleSheet.create({
     ...typography.headingSm,
     color: colors.whiteSoft,
     textAlign: 'center',
+  },
+  trustRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  trustItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  trustText: {
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   advantageCard: {
     flexDirection: 'row',
@@ -282,6 +448,98 @@ const styles = StyleSheet.create({
   },
   secondaryArea: {
     gap: spacing.sm,
+  },
+  momentumCard: {
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.sm,
+  },
+  momentumHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  momentumIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.warningSoft,
+  },
+  momentumCopy: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  momentumTitle: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  momentumBody: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  momentumPercent: {
+    ...typography.headingSm,
+    color: colors.teal,
+  },
+  goalTrack: {
+    height: 9,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceMuted,
+    overflow: 'hidden',
+  },
+  goalFill: {
+    height: '100%',
+    borderRadius: radius.full,
+    backgroundColor: colors.warning,
+  },
+  promoCard: {
+    borderRadius: radius.lg,
+    backgroundColor: colors.whiteSoft,
+    borderWidth: 1,
+    borderColor: colors.warningSoft,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  promoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  promoKicker: {
+    ...typography.caption,
+    color: colors.warning,
+  },
+  promoTitle: {
+    ...typography.headingLg,
+    color: colors.ink,
+  },
+  promoValue: {
+    ...typography.headingLg,
+    color: colors.teal,
+    textAlign: 'right',
+  },
+  promoReason: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  sponsoredLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    paddingTop: spacing.sm,
+  },
+  sponsoredText: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    flex: 1,
   },
   linkAction: {
     ...typography.headingSm,

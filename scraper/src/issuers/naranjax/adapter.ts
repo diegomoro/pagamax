@@ -10,7 +10,7 @@ import { createLogger } from '../../core/logging/logger.js';
 import { NARANJAX_CONFIG } from './config.js';
 import { discoverNaranjaxUrls } from './discover.js';
 import { normalizeNaranjaxCandidate } from './normalize.js';
-import { extractDetailPageData, type DetailPageData } from './extractDetailPlaywright.js';
+import { extractDetailPageData, type DetailPageData } from './extractDetail.js';
 
 const log = createLogger({ issuerCode: NARANJAX_CONFIG.issuerCode });
 
@@ -297,7 +297,7 @@ export class NaranjaxAdapter implements IssuerAdapter {
 
             // Grab validity text while the card is visible, then click it
             const validity = await page.evaluate((t: string) => {
-              const cards = document.querySelectorAll('.card-container--hover');
+              const cards = Array.from(document.querySelectorAll('.card-container--hover'));
               for (const c of cards) {
                 const titleEl = c.querySelector('.card__body-title, .equis-body-1-medium') as HTMLElement;
                 if (titleEl?.innerText?.trim() === t) {
@@ -396,7 +396,7 @@ export class NaranjaxAdapter implements IssuerAdapter {
     const currentUrl = page.url();
     try {
       const clicked = await page.evaluate((targetBrand: string) => {
-        const cards = document.querySelectorAll('.card-container--hover');
+        const cards = Array.from(document.querySelectorAll('.card-container--hover'));
         for (const card of cards) {
           const cardBrand = (card.querySelector('[class="Promo Brand"]') as HTMLElement)?.innerText?.trim() ?? '';
           if (cardBrand === targetBrand) {
@@ -424,7 +424,7 @@ export class NaranjaxAdapter implements IssuerAdapter {
     const currentUrl = page.url();
     try {
       const clicked = await page.evaluate((t: string) => {
-        const cards = document.querySelectorAll('.card-container--hover');
+        const cards = Array.from(document.querySelectorAll('.card-container--hover'));
         for (const card of cards) {
           const titleEl = card.querySelector('.card__body-title, .equis-body-1-medium') as HTMLElement;
           if (titleEl?.innerText?.trim() === t) {

@@ -1,4 +1,5 @@
 import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Card, Chip, IconButton, InlineNotice, Pill, ScreenScroll, SecondaryButton, ToggleRow } from '@/components/ui';
 import { SectionHeader } from '@/components/section-header';
@@ -17,11 +18,13 @@ function formatDiagnosticTime(raw: string): string {
 
 export default function ProfileScreen() {
   const {
+    account,
     checkForPromoUpdates,
     clearDiagnostics,
     diagnostics,
     promoDataStatus,
     settings,
+    signOutAccount,
     updateSettings,
   } = usePagamax();
 
@@ -37,20 +40,78 @@ export default function ProfileScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <SectionHeader title="Optimizacion" subtitle="Define como quieres que Paga Menos ordene las rutas por defecto." />
+      <Card style={styles.trustCard}>
+        <View style={styles.trustHeader}>
+          <View style={styles.trustIcon}>
+            <Ionicons name="shield-checkmark-outline" size={22} color={colors.accentPressed} />
+          </View>
+          <View style={styles.trustCopy}>
+            <Text style={styles.trustTitle}>Reglas de confianza</Text>
+            <Text style={styles.trustBody}>Primero va lo que mas te sirve. Si un comercio paga por aparecer, se marca claro.</Text>
+          </View>
+        </View>
+        <View style={styles.trustGrid}>
+          <View style={styles.trustPill}>
+            <Text style={styles.trustPillValue}>Fee visible</Text>
+            <Text style={styles.trustPillLabel}>sin letra chica</Text>
+          </View>
+          <View style={styles.trustPill}>
+            <Text style={styles.trustPillValue}>QR primero</Text>
+            <Text style={styles.trustPillLabel}>menos pasos</Text>
+          </View>
+          <View style={styles.trustPill}>
+            <Text style={styles.trustPillValue}>Pauta separada</Text>
+            <Text style={styles.trustPillLabel}>sin disfrazarla</Text>
+          </View>
+        </View>
+      </Card>
+
+      <SectionHeader title="Cuenta" subtitle="Identidad local para esta beta." />
+      <Card style={styles.card}>
+        {account ? (
+          <>
+            <View style={styles.accountHeader}>
+              <View style={styles.accountAvatar}>
+                <Ionicons name="person-outline" size={22} color={colors.accentPressed} />
+              </View>
+              <View style={styles.accountCopy}>
+                <Text style={styles.accountName}>{account.displayName}</Text>
+                <Text style={styles.help}>{account.email}</Text>
+              </View>
+              <Pill label={account.syncStatus === 'synced' ? 'sync' : 'local'} tone={account.syncStatus === 'synced' ? 'success' : 'warning'} />
+            </View>
+            {account.phoneLabel ? <Text style={styles.help}>Telefono: {account.phoneLabel}</Text> : null}
+            <View style={styles.buttonRow}>
+              <SecondaryButton stretch={false} onPress={() => router.push('/account')}>Editar</SecondaryButton>
+              <SecondaryButton stretch={false} onPress={() => void signOutAccount()}>Cerrar local</SecondaryButton>
+            </View>
+          </>
+        ) : (
+          <>
+            <InlineNotice
+              title="Sin cuenta beta"
+              body="Crea una cuenta local para asociar este telefono y preparar la sincronizacion."
+              tone="warning"
+            />
+            <SecondaryButton onPress={() => router.push('/account')}>Crear cuenta</SecondaryButton>
+          </>
+        )}
+      </Card>
+
+      <SectionHeader title="Como elegir" subtitle="Decidi si queres mas ahorro o menos vueltas." />
       <Card style={styles.card}>
         <View style={styles.chips}>
           <Chip label="Maximo ahorro" selected={settings.optimizationMode === 'max_savings'} onPress={() => updateSettings({ optimizationMode: 'max_savings' })} />
           <Chip label="Pago mas rapido" selected={settings.optimizationMode === 'fastest_checkout'} onPress={() => updateSettings({ optimizationMode: 'fastest_checkout' })} />
         </View>
-        <Text style={styles.help}>Modo actual: {settings.optimizationMode === 'max_savings' ? 'prioriza ahorro neto' : 'prioriza menos pasos y menor friccion'}.</Text>
+        <Text style={styles.help}>Modo actual: {settings.optimizationMode === 'max_savings' ? 'busca mas plata para vos' : 'busca pagar con menos pasos'}.</Text>
       </Card>
 
       <SectionHeader title="Alertas" subtitle="Solo avisos utiles y con umbral visible." />
       <Card style={styles.card}>
         <ToggleRow
           title="Notificaciones"
-          body="Avisos cuando el ahorro neto esperado supere tu umbral."
+          body="Avisos cuando la plata estimada supere tu minimo."
           value={settings.notificationsEnabled}
           onValueChange={(value) => updateSettings({ notificationsEnabled: value })}
         />
@@ -69,7 +130,7 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
-      <SectionHeader title="Superficies" subtitle="Decide donde quieres que Paga Menos busque oportunidades utiles." />
+      <SectionHeader title="Donde mirar" subtitle="Elegi en que compras queres ayuda." />
       <Card style={styles.card}>
         <ToggleRow
           title="En tienda"
@@ -116,7 +177,7 @@ export default function ProfileScreen() {
         {staleData ? (
           <InlineNotice
             title="Base posiblemente vieja"
-            body="Si hoy vas a probar en tiendas, revisa el remoto antes de salir o puede que evales promos vencidas."
+            body="Si hoy vas a probar en tiendas, revisa el remoto antes de salir o puede que evalues promos vencidas."
             tone="warning"
           />
         ) : null}
@@ -133,14 +194,14 @@ export default function ProfileScreen() {
         ) : null}
       </Card>
 
-      <SectionHeader title="Transparencia" subtitle="La propuesta tiene que ser simple de entender antes de pagar." />
+      <SectionHeader title="Transparencia" subtitle="Tenes que entenderlo antes de abrir la app de pago." />
       <Card style={styles.card}>
-        <Text style={styles.help}>Paga Menos muestra ahorro bruto, fee y ahorro neto en cada recomendacion.</Text>
-        <Text style={styles.help}>Si una ruta depende del dia, del tope o de condiciones extra, lo marcamos antes de abrir la app de pago.</Text>
-        <Text style={styles.help}>La idea es ayudarte a pagar mejor, no empujarte a usar una ruta que no entiendes.</Text>
+        <Text style={styles.help}>Paga Menos muestra ahorro bruto, fee y plata final para vos.</Text>
+        <Text style={styles.help}>Si depende del dia, tope o condicion rara, te lo marcamos antes.</Text>
+        <Text style={styles.help}>La idea es ayudarte a elegir, no empujarte a pagar algo que no entendiste.</Text>
       </Card>
 
-      <SectionHeader title="Modo avanzado" subtitle="Controles extra para depurar el ranking y los handoffs." />
+      <SectionHeader title="Modo avanzado" subtitle="Controles extra para probar calculo y apertura de apps." />
       <Card style={styles.card}>
         <ToggleRow
           title="Debug visible"
@@ -154,10 +215,10 @@ export default function ProfileScreen() {
           value={settings.advancedMode}
           onValueChange={(value) => updateSettings({ advancedMode: value })}
         />
-        <Text style={styles.help}>Paga Menos muestra fee, ahorro estimado y caveats en cada recomendacion. No oculta el costo de usar la app.</Text>
+        <Text style={styles.help}>Paga Menos muestra fee, ahorro estimado y condiciones. No oculta el costo de usar la app.</Text>
       </Card>
 
-      <SectionHeader title="Eventos recientes" subtitle="Registro corto de actualizaciones, QR, matches y handoffs." />
+      <SectionHeader title="Eventos recientes" subtitle="Registro corto de actualizaciones, QR, detecciones y aperturas de apps." />
       <Card style={styles.card}>
         {visibleDiagnostics.length > 0 ? visibleDiagnostics.map((event) => (
           <View key={event.id} style={styles.eventRow}>
@@ -209,6 +270,82 @@ const styles = StyleSheet.create({
   title: {
     ...typography.headingLg,
     color: colors.ink,
+  },
+  trustCard: {
+    gap: spacing.md,
+    backgroundColor: colors.surfaceElevated,
+  },
+  trustHeader: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'flex-start',
+  },
+  trustIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
+  },
+  trustCopy: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  trustTitle: {
+    ...typography.headingLg,
+    color: colors.ink,
+  },
+  trustBody: {
+    ...typography.bodySm,
+    color: colors.inkMuted,
+  },
+  trustGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  trustPill: {
+    flex: 1,
+    minWidth: 116,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceSoft,
+    padding: spacing.sm,
+    gap: spacing.xxs,
+  },
+  trustPillValue: {
+    ...typography.caption,
+    color: colors.ink,
+  },
+  trustPillLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  accountHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  accountAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
+  },
+  accountCopy: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  accountName: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   card: {
     borderRadius: radius.lg,

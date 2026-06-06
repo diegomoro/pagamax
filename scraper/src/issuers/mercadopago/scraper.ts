@@ -113,7 +113,7 @@ async function main(): Promise<void> {
     for (const item of page1.benefits.slice(0, 3)) {
       let vdp;
       try { vdp = await fetchVdp(cookieHeader, item.id); } catch(e) { process.stderr.write(`  VDP err: ${e}\n`); }
-      const p = normalize({ listItem: item, vdp }, scrapedAt);
+      const p = normalize(vdp ? { listItem: item, vdp } : { listItem: item }, scrapedAt);
       process.stderr.write(`  ${p.merchant_name} — ${p.promo_title} | type=${p.discount_type} days=${p.days_of_week} rails=${p.allowed_rails} cap=${p.cap_amount_ars ?? 'sin_tope'} min=${p.min_purchase_ars ?? '-'}\n`);
       promos.push(p);
     }

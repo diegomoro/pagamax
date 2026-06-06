@@ -54,19 +54,19 @@ function translateReason(reason: string): string {
 function translateWarning(warning: string): string {
   const capMatch = warning.match(/^Assumes full (.+) cap is still available$/);
   if (capMatch) {
-    return `Asume que el tope ${translateCapPeriod(capMatch[1])} sigue disponible`;
+    return `Puede depender de que todavia tengas tope ${translateCapPeriod(capMatch[1])}`;
   }
 
   if (warning === 'Cashback timing is not modeled; gross value only') {
-    return 'No modela el tiempo de acreditacion del reintegro; muestra solo el valor bruto';
+    return 'El reintegro puede acreditarse despues; mira la app antes de confirmar';
   }
 
   if (warning === 'Coupon application may still be required at checkout') {
-    return 'Puede requerir cupon o activacion adicional en el checkout';
+    return 'Puede pedir cupon o activacion antes de pagar';
   }
 
   if (warning === 'Installment value is an estimate, not a guaranteed cash discount') {
-    return 'El valor de cuotas es una estimacion, no un descuento garantizado en efectivo';
+    return 'Las cuotas son estimadas; no es plata descontada en el momento';
   }
 
   return warning;
@@ -107,7 +107,7 @@ export function buildConfidence(matchMethod: MatchMethod, warningCount: number):
       label: 'Media',
       score,
       tone: 'warning',
-      note: 'La recomendacion es util, pero conviene revisar topes, fechas o el comercio detectado.',
+      note: 'Parece buena, pero conviene mirar topes, fechas o comercio detectado.',
     };
   }
 
@@ -115,7 +115,7 @@ export function buildConfidence(matchMethod: MatchMethod, warningCount: number):
     label: 'Baja',
     score,
     tone: 'default',
-    note: 'La recomendacion se apoya en inferencias generales y merece validacion manual.',
+    note: 'Es una ayuda general. Revisala antes de pagar.',
   };
 }
 
@@ -123,6 +123,26 @@ export function buildRecommendationPresentation(
   session: RecommendationSession,
   recommendation: PaymentRecommendation,
 ) {
+  const ownerRoute = session.ownerRoute && session.ownerRoute.recommendation.method.id === recommendation.method.id
+    ? session.ownerRoute
+    : null;
+
+  if (ownerRoute) {
+    const confidence = buildConfidence(session.match.match_method, recommendation.warnings.length);
+    return {
+      grossSavingsArs: ownerRoute.grossDiscountArs,
+      pagamaxFeeArs: ownerRoute.customerDiscountShareArs,
+      netSavingsArs: ownerRoute.ownerCaptureArs,
+      confidence,
+      qualifiers: [
+        `Cliente paga ${ownerRoute.customerChargeArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })} a ${ownerRoute.payoutAlias}`,
+        `Pagamax captura ${ownerRoute.ownerCaptureArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}`,
+        `Despues paga el QR con ${ownerRoute.ownerMethod.label}`,
+      ],
+      caveats: recommendation.warnings.map(translateWarning),
+    };
+  }
+
   const grossSavingsArs = Math.max(0, Math.round(recommendation.estimatedSavingsArs));
   const pagamaxFeeArs = estimatePagamaxFeeArs(grossSavingsArs);
   const netSavingsArs = Math.max(0, grossSavingsArs - pagamaxFeeArs);

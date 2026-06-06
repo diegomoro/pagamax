@@ -212,7 +212,7 @@ export async function fetchAllPromos(opts: {
   const { concurrency = 3, delayMs = 400, onProgress } = opts;
 
   process.stderr.write('[bbva/extract] Fetching list pages…\n');
-  const listItems = await fetchAllListItems({ onProgress });
+  const listItems = await fetchAllListItems(onProgress ? { onProgress } : {});
   process.stderr.write(`[bbva/extract] ${listItems.length} items collected\n`);
 
   process.stderr.write(`[bbva/extract] Fetching details (concurrency=${concurrency}, delay=${delayMs}ms)…\n`);
@@ -242,11 +242,12 @@ export async function fetchAllPromos(opts: {
       results.push({ listItem: listItems[i]!, detail: {} as BbvaDetailItem, fetchError: dr.message });
     } else {
       const detail = dr as BbvaDetailItem | null;
-      results.push({
+      const rawPromo: BbvaRawPromo = {
         listItem: listItems[i]!,
         detail:   (detail ?? {}) as BbvaDetailItem,
-        fetchError: detail ? undefined : 'no_data',
-      });
+      };
+      if (!detail) rawPromo.fetchError = 'no_data';
+      results.push(rawPromo);
     }
   }
 

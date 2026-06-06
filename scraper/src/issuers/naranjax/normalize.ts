@@ -321,5 +321,8 @@ function parseRefundInfo(text: string): { method?: Benefit['refundMethod']; dela
     delayDays = parseInt(delayMatch[1], 10);
   }
 
-  return { method, delayDays };
+  return {
+    ...(method && { method }),
+    ...(delayDays !== undefined && { delayDays }),
+  };
 }

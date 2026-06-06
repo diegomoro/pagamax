@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { memo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { StoredPaymentMethod } from '@/types/app';
 import { ProviderIcon } from '@/components/provider-icon';
 import { BottomSheet, Chip, EmptyState, IconButton, LoadingBlock, ScreenScroll, SecondaryButton } from '@/components/ui';
@@ -89,6 +90,7 @@ export default function MethodsScreen() {
   const { loading, methods, resetMethods, toggleMethodEnabled, updateMethod } = usePagamax();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return <LoadingBlock label="Cargando medios guardados..." />;
@@ -111,7 +113,7 @@ export default function MethodsScreen() {
 
   return (
     <>
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top + spacing.lg }]}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={styles.title}>Tus medios de pago</Text>
@@ -152,7 +154,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
   },
   header: {
     flexDirection: 'row',

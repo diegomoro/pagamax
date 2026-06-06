@@ -2,10 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Tabs, router } from 'expo-router';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FloatingActionButton } from '@/components/ui';
 import { colors, shadows } from '@/lib/theme';
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -16,8 +19,9 @@ export default function TabsLayout() {
           tabBarStyle: {
             backgroundColor: colors.surfaceElevated,
             borderTopWidth: 0,
-            height: 64,
+            height: 64 + insets.bottom,
             paddingTop: 8,
+            paddingBottom: Math.max(insets.bottom, 8),
             ...shadows.md,
           },
           tabBarLabelStyle: {
@@ -35,7 +39,7 @@ export default function TabsLayout() {
           }}
           options={{
             title: 'Inicio',
-            tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
+            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={size} />,
           }}
         />
         <Tabs.Screen
@@ -47,7 +51,7 @@ export default function TabsLayout() {
           }}
           options={{
             title: 'Mis medios',
-            tabBarIcon: ({ color, size }) => <Ionicons name="wallet-outline" color={color} size={size} />,
+            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'wallet' : 'wallet-outline'} color={color} size={size} />,
           }}
         />
       </Tabs>

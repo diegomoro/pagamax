@@ -100,7 +100,7 @@ async function main(): Promise<void> {
       } catch(e) {
         process.stderr.write(`  Detail err ${item.id}: ${e}\n`);
       }
-      const p = normalize({ listItem: item, detail }, scrapedAt);
+      const p = normalize(detail ? { listItem: item, detail } : { listItem: item }, scrapedAt);
       process.stderr.write(
         `  ${p.merchant_name} — ${p.promo_title} | ` +
         `type=${p.discount_type} pct=${p.discount_percent ?? '-'} ` +

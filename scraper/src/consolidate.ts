@@ -44,6 +44,8 @@ const ISSUER_DIRS: Record<Issuer, { dir: string; prefix: string }> = {
   ypf:            { dir: 'output_ypf',             prefix: 'ypf' },
   shellbox:       { dir: 'output_shellbox',        prefix: 'shellbox' },
   carrefour_bank: { dir: 'output_carrefour_bank',  prefix: 'carrefour_bank' },
+  bancor:         { dir: 'output_bancor',          prefix: 'bancor' },
+  clash:          { dir: 'output_clash',           prefix: 'clash' },
 };
 
 /** Find the alphabetically latest NDJSON for an issuer (date-stamped filenames sort correctly). */
@@ -75,7 +77,7 @@ function checkSourceAge(filePath: string, issuer: string): number {
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-function freshness(validFrom: string, validTo: string, isActive: unknown): string {
+function freshness(validFrom: string, validTo: string, isActive: unknown): CanonicalPromo['freshness_status'] {
   if (isActive === false) return 'expired';
   if (validTo && validTo < TODAY) return 'expired';
   if (validFrom && validFrom > TODAY) return 'future';
@@ -155,7 +157,7 @@ function modoInstrument(rails: string, cardTypes: string): CanonicalPromo['instr
     if (ct.includes('debito')) return 'debit_card';
     return 'any';
   }
-  return 'card';
+  return 'any';
 }
 
 /** Stub scores — overwritten by computeScores() in the main loop. */
@@ -838,6 +840,12 @@ function mapCarrefourBank(r: Record<string, unknown>): CanonicalPromo {
   };
 }
 
+function mapCanonicalRow(r: Record<string, unknown>): CanonicalPromo {
+  const p: Record<string, unknown> = {};
+  for (const col of CANONICAL_COLS) p[col] = r[col];
+  return p as unknown as CanonicalPromo;
+}
+
 // ─── Issuer config registry ───────────────────────────────────────────────────
 
 const MAPPER: Record<Issuer, (r: Record<string, unknown>) => CanonicalPromo | null> = {
@@ -851,6 +859,8 @@ const MAPPER: Record<Issuer, (r: Record<string, unknown>) => CanonicalPromo | nu
   ypf:            mapYpf,
   shellbox:       mapShellbox,
   carrefour_bank: mapCarrefourBank,
+  bancor:         mapCanonicalRow,
+  clash:          mapCanonicalRow,
 };
 
 // ─── CSV writer ───────────────────────────────────────────────────────────────
@@ -861,6 +871,118 @@ function csvCell(v: unknown): string {
   return s;
 }
 
+function normalizeForDedupe(v: unknown): string {
+  return str(v)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' y ')
+    .replace(/\b(s\.?a\.?|s\.?r\.?l\.?|sa|srl|sas|inc|ltda)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function bankAlias(raw: string): string {
+  const v = normalizeForDedupe(raw);
+  if (!v) return '';
+  if (/\bbbva\b/.test(v)) return 'bbva';
+  if (/bancor|banco de cordoba|cordobesa|provincia de cordoba/.test(v)) return 'bancor';
+  if (/mercado pago|mercadopago/.test(v)) return 'mercadopago';
+  if (/naranja/.test(v)) return 'naranjax';
+  if (/cuenta dni|banco provincia\b|provincia buenos aires/.test(v)) return 'cuentadni';
+  if (/uala/.test(v)) return 'uala';
+  if (/personal pay|personalpay/.test(v)) return 'personalpay';
+  if (/carrefour|banco de servicios financieros/.test(v)) return 'carrefour_bank';
+  if (/ypf/.test(v)) return 'ypf';
+  if (/shell/.test(v)) return 'shellbox';
+  return v;
+}
+
+function clashBankName(p: CanonicalPromo): string {
+  if (p.issuer !== 'clash') return '';
+  try {
+    const raw = JSON.parse(p.raw_snippet || '{}') as { bank?: { name?: string } };
+    return raw.bank?.name ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function promoBankKey(p: CanonicalPromo): string {
+  if (p.issuer === 'clash') return bankAlias(clashBankName(p));
+  if (p.issuer === 'modo' && p.wallet_scope) return `modo:${normalizeForDedupe(p.wallet_scope)}`;
+  return bankAlias(p.issuer);
+}
+
+function promoComboKey(p: CanonicalPromo): string {
+  return [
+    promoBankKey(p),
+    normalizeForDedupe(p.merchant_name),
+    normalizeForDedupe(p.category),
+    p.discount_type,
+    p.discount_percent ?? '',
+    p.discount_amount_ars ?? '',
+    p.installments_count ?? '',
+    p.cap_amount_ars ?? '',
+    normalizeForDedupe(p.cap_period),
+    normalizeForDedupe(p.day_pattern),
+    p.rail,
+    p.instrument_required,
+    normalizeForDedupe(p.card_brand_scope),
+    normalizeForDedupe(p.card_type_scope),
+    normalizeForDedupe(p.wallet_scope),
+  ].join('|');
+}
+
+function sourcePriority(p: CanonicalPromo): number {
+  return p.issuer === 'clash' ? 0 : 10;
+}
+
+function completenessScore(p: CanonicalPromo): number {
+  return [
+    p.valid_to,
+    p.terms_text_raw,
+    p.exclusions_raw || p.excluded_rails,
+    p.description_short,
+    p.merchant_logo_url,
+    p.geo_scope,
+  ].filter(Boolean).length;
+}
+
+function preferPromo(a: CanonicalPromo, b: CanonicalPromo): CanonicalPromo {
+  const pa = sourcePriority(a), pb = sourcePriority(b);
+  if (pa !== pb) return pa > pb ? a : b;
+  const qa = completenessScore(a), qb = completenessScore(b);
+  if (qa !== qb) return qa > qb ? a : b;
+  if (a.routing_confidence !== b.routing_confidence) return a.routing_confidence > b.routing_confidence ? a : b;
+  if (a.data_quality_score !== b.data_quality_score) return a.data_quality_score > b.data_quality_score ? a : b;
+  return a.promo_key.localeCompare(b.promo_key) <= 0 ? a : b;
+}
+
+function dedupePromoCombos(rows: CanonicalPromo[]): { rows: CanonicalPromo[]; dropped: number; clashDropped: number } {
+  const byCombo = new Map<string, CanonicalPromo>();
+  let dropped = 0;
+  let clashDropped = 0;
+
+  for (const row of rows) {
+    const key = promoComboKey(row);
+    const existing = byCombo.get(key);
+    if (!existing) {
+      byCombo.set(key, row);
+      continue;
+    }
+
+    const preferred = preferPromo(existing, row);
+    const rejected = preferred === existing ? row : existing;
+    byCombo.set(key, preferred);
+    dropped++;
+    if (rejected.issuer === 'clash') clashDropped++;
+  }
+
+  return { rows: [...byCombo.values()], dropped, clashDropped };
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -868,7 +990,7 @@ async function main(): Promise<void> {
   const dateStr = runAt.slice(0, 10);
   process.stderr.write(`[consolidate] today=${TODAY} active-only=${activeOnly}\n\n`);
 
-  const all: CanonicalPromo[] = [];
+  let all: CanonicalPromo[] = [];
   const stats: Record<string, { loaded: number; mapped: number; skipped: number; source: string }> = {};
 
   const issuers = Object.keys(ISSUER_DIRS) as Issuer[];
@@ -932,7 +1054,13 @@ async function main(): Promise<void> {
     stats[issuer] = { loaded: rows.length, mapped, skipped, source: ndjsonPath };
   }
 
-  process.stderr.write(`\n[consolidate] Total rows: ${all.length}\n`);
+  const preDedupeRows = all.length;
+  const deduped = dedupePromoCombos(all);
+  all = deduped.rows;
+
+  process.stderr.write(`\n[consolidate] Total rows before dedupe: ${preDedupeRows}\n`);
+  process.stderr.write(`[consolidate] Dedupe dropped: ${deduped.dropped} (${deduped.clashDropped} from Clash)\n`);
+  process.stderr.write(`[consolidate] Total rows after dedupe: ${all.length}\n`);
 
   // ── NDJSON ──────────────────────────────────────────────────────────────────
   const ndjsonPath = join(outDir, `pagamax-${dateStr}.ndjson`);
@@ -969,6 +1097,11 @@ async function main(): Promise<void> {
     today:       TODAY,
     active_only: activeOnly,
     total_rows:  all.length,
+    pre_dedupe_rows: preDedupeRows,
+    dedupe: {
+      dropped: deduped.dropped,
+      clash_dropped: deduped.clashDropped,
+    },
     by_issuer:   byIssuer,
     sources:     stats,
     coverage: {

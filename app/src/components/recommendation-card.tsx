@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { PaymentRecommendation } from '@pagamax/core';
 import { ConfidenceBadge } from '@/components/confidence-badge';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -12,7 +13,7 @@ import type { ConfidenceInfo } from '@/types/app';
 function valueTypeLabel(valueType: PaymentRecommendation['valueType']): string {
   if (valueType === 'cashback') return 'Reintegro';
   if (valueType === 'financing_estimate') return 'Cuotas';
-  if (valueType === 'fallback') return 'Ruta disponible';
+  if (valueType === 'fallback') return 'Opcion simple';
   return 'Descuento';
 }
 
@@ -98,13 +99,16 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
       </View>
 
       <View style={styles.decisionRow}>
-        <Text style={styles.decisionLabel}>Mejor ruta para este pago</Text>
+        <View style={styles.decisionLeft}>
+          <Ionicons name={isFallback ? 'shield-checkmark-outline' : 'sparkles-outline'} size={16} color={colors.accentPressed} />
+          <Text style={styles.decisionLabel}>{isFallback ? 'Anda con esta' : 'Usa esta para pagar'}</Text>
+        </View>
         <Pill label={`Confianza ${confidence.label}`} tone={confidence.tone === 'success' ? 'success' : confidence.tone === 'warning' ? 'warning' : 'default'} />
       </View>
 
       <View style={styles.heroValueWrap}>
-        <Text style={styles.heroValue}>{isFallback ? 'Ruta por defecto' : formatArs(displayValue)}</Text>
-        <Text style={styles.heroCaption}>{isFallback ? 'No vimos descuento confiable. Paga simple y revisa antes de confirmar.' : 'Ahorro neto estimado para vos'}</Text>
+        <Text style={styles.heroValue}>{isFallback ? 'Paga simple' : formatArs(displayValue)}</Text>
+        <Text style={styles.heroCaption}>{isFallback ? 'No encontre una promo segura. Esta es la opcion mas directa.' : 'Plata estimada que queda para vos'}</Text>
       </View>
 
       {isFallback ? null : (
@@ -124,13 +128,13 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
       </View>
 
       <Text style={styles.heroTrust}>
-        {isFallback ? `Datos revisados al ${dataDateLabel}. Sin promo confiable para este comercio.` : `Estimado con reglas vigentes al ${dataDateLabel}. Revisa la app antes de confirmar.`}
+        {isFallback ? `Revisado al ${dataDateLabel}. Si aparece una promo real, te la mostramos.` : `Estimado con reglas vigentes al ${dataDateLabel}. Mira la app antes de confirmar.`}
       </Text>
 
       <View style={styles.heroActions}>
         <PrimaryButton onPress={onPressPrimary}>{primaryLabel}</PrimaryButton>
         <View style={styles.heroSecondary}>
-          <SecondaryButton onPress={onPressDetails}>Por que funciona</SecondaryButton>
+          <SecondaryButton onPress={onPressDetails}>Ver el por que</SecondaryButton>
         </View>
       </View>
     </Animated.View>
@@ -164,7 +168,7 @@ export const CompactRecommendationRow = memo(function CompactRecommendationRow({
         </View>
         <View style={styles.rowRight}>
           <Text style={styles.rowValue}>{recommendation.valueType === 'fallback' ? 'Abrir' : formatArs(netSavingsArs)}</Text>
-          <Text style={styles.rowHint}>{recommendation.valueType === 'fallback' ? 'ruta' : 'neto'}</Text>
+          <Text style={styles.rowHint}>{recommendation.valueType === 'fallback' ? 'simple' : 'para vos'}</Text>
         </View>
       </Pressable>
     </Animated.View>
@@ -211,6 +215,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  decisionLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   decisionLabel: {
     ...typography.caption,
