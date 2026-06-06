@@ -82,7 +82,7 @@ export default function HomeScreen() {
   const sharePagamax = async () => {
     try {
       await Share.share({
-        message: 'Antes de pagar escaneo con Paga Menos. Me dice qué app o tarjeta conviene y después confirmo yo.',
+        message: 'Antes de pagar escaneo con Paga Menos. En dos segundos veo si hay una promo mejor.',
       });
     } catch {
       // Sharing is optional; the home screen should stay quiet if the sheet fails.
@@ -131,8 +131,8 @@ export default function HomeScreen() {
 
         <View style={styles.heroArea}>
           <View style={styles.habitCue}>
-            <Text style={styles.habitTitle}>Antes de pagar, escaneá.</Text>
-            <Text style={styles.habitBody}>Te digo qué app o tarjeta te conviene. Vos aprobás el pago en tu billetera.</Text>
+            <Text style={styles.habitTitle}>Escaneá y pagá menos.</Text>
+            <Text style={styles.habitBody}>Mostrá el QR. Vemos la mejor promo.</Text>
           </View>
 
           <Animated.View style={[styles.scanMotionWrap, { transform: [{ translateY: scanLift }] }]}>
@@ -141,13 +141,13 @@ export default function HomeScreen() {
               <LinearGradient colors={[colors.accent, colors.teal]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scanFill}>
                 <View style={styles.liveRow}>
                   <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>Mostrame el QR del comercio</Text>
+                  <Text style={styles.liveText}>Mostrá el QR</Text>
                 </View>
                 <View style={styles.scanIconWrap}>
                   <Ionicons name="qr-code-outline" size={42} color={colors.teal} />
                 </View>
                 <Text style={styles.scanLabel}>Escanear QR</Text>
-                <Text style={styles.scanMeta}>En segundos sabés con qué pagar</Text>
+                <Text style={styles.scanMeta}>Promo clara antes de pagar</Text>
               </LinearGradient>
             </Pressable>
           </Animated.View>
@@ -155,7 +155,7 @@ export default function HomeScreen() {
           <View style={styles.trustRow}>
             <View style={styles.trustItem}>
               <Ionicons name="shield-checkmark-outline" size={15} color={colors.accentPressed} />
-              <Text style={styles.trustText}>Vos aprobás</Text>
+              <Text style={styles.trustText}>Vos pagás</Text>
             </View>
             <View style={styles.trustItem}>
               <Ionicons name="pricetag-outline" size={15} color={colors.accentPressed} />
@@ -163,7 +163,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.trustItem}>
               <Ionicons name="megaphone-outline" size={15} color={colors.warning} />
-              <Text style={styles.trustText}>Sponsors marcados</Text>
+              <Text style={styles.trustText}>Sin vueltas</Text>
             </View>
           </View>
 
@@ -185,8 +185,8 @@ export default function HomeScreen() {
                 <Ionicons name="flame-outline" size={18} color={colors.warning} />
               </View>
               <View style={styles.momentumCopy}>
-                <Text style={styles.momentumTitle}>Pagá con cabeza</Text>
-                <Text style={styles.momentumBody}>{smartStreak} compras miradas antes de elegir. Objetivo: que no se te escape {formatArs(monthlyGoalArs)}.</Text>
+                <Text style={styles.momentumTitle}>Ahorro del mes</Text>
+                <Text style={styles.momentumBody}>{smartStreak} compras revisadas. Objetivo: ahorrar {formatArs(monthlyGoalArs)}.</Text>
               </View>
               <Text style={styles.momentumPercent}>{Math.round(goalProgress * 100)}%</Text>
             </View>
@@ -202,7 +202,7 @@ export default function HomeScreen() {
             >
               <View style={styles.promoHeader}>
                 <View>
-                  <Text style={styles.promoKicker}>Para mirar hoy</Text>
+                  <Text style={styles.promoKicker}>Hoy puede rendir</Text>
                   <Text style={styles.promoTitle}>{bestNearbyPromo.merchantName}</Text>
                 </View>
                 <Text style={styles.promoValue}>{formatArs(bestNearbyPromo.likelyNetSavingsArs)}</Text>
@@ -211,7 +211,7 @@ export default function HomeScreen() {
               {merchantSpotlight ? (
                 <View style={styles.sponsoredLine}>
                   <Ionicons name="megaphone-outline" size={14} color={colors.warning} />
-                  <Text style={styles.sponsoredText}>Sponsor: {merchantSpotlight.merchantName}. Va separado y marcado, sin tapar la mejor opción para vos.</Text>
+                  <Text style={styles.sponsoredText}>Sponsor: {merchantSpotlight.merchantName}. Marcado y separado.</Text>
                 </View>
               ) : null}
             </Pressable>

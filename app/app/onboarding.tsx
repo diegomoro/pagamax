@@ -41,7 +41,7 @@ export default function OnboardingScreen() {
         </View>
         <View style={styles.benefits}>
           <Chip label="Escanear antes de pagar" selected />
-        <Chip label="Te digo con qué pagar" selected />
+        <Chip label="Promos al toque" selected />
           <Chip label="Vos confirmas siempre" selected />
         </View>
       </Card>

@@ -66,7 +66,7 @@ export default function ManualEntryScreen() {
         <View style={styles.topBar}>
           <IconButton icon="arrow-back" onPress={() => router.back()} />
         </View>
-        <PageTitle title="Promos para hoy" subtitle="Elegí un comercio, poné un monto y mirá qué banco, tarjeta o billetera te conviene." />
+        <PageTitle title="Promos de hoy" subtitle="Poné comercio y monto. Vemos si hay algo mejor." />
 
         {pendingScan && !allowOverride ? (
           <InlineNotice
@@ -135,7 +135,7 @@ export default function ManualEntryScreen() {
       </ScreenScroll>
 
       <StickyButton
-        label="Ver con qué pagar"
+        label="Buscar promo"
         preview={canSubmit ? `${merchantInput.trim()} por ${formatArs(amountArs ?? 0)}` : 'Completa monto y comercio'}
         disabled={!canSubmit}
         onPress={() => void submit()}

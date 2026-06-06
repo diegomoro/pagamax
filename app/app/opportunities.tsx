@@ -45,7 +45,7 @@ export default function OpportunitiesScreen() {
               <View style={styles.heroIcon}>
                 <Ionicons name="storefront-outline" size={24} color={colors.accentPressed} />
               </View>
-              <Text style={styles.heroTitle}>Antes de elegir local, mira si te conviene</Text>
+              <Text style={styles.heroTitle}>Promos cerca tuyo</Text>
               <Text style={styles.heroBody}>Aca gana el ahorro probable. Si un comercio paga por aparecer, queda marcado y separado.</Text>
               <View style={styles.proofRow}>
                 <View style={styles.proofPill}>
