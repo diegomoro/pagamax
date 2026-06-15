@@ -2,9 +2,13 @@
 
 Date: 2026-05-24
 
+Ultimate objective: maximize time-discounted net profit. LTV work should increase the present value of future revenue after acquisition, operations, support, fraud, legal/compliance, data, and trust-damage costs. The shopper experience matters because it creates the repeated trusted checkout intent that drives monetizable LTV.
+
 Launch sequence: Cordoba first, then Rosario, then Argentina.
 
 ## Highest-LTV personas
+
+Optimize for personas that increase discounted net profit, not only gross usage. A persona is attractive when purchase frequency, promo complexity, willingness to share, merchant/issuer value, low support burden, and retention outweigh acquisition and servicing costs.
 
 ### Primary persona: promo-aware household optimizer
 

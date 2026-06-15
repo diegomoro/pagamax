@@ -11,7 +11,7 @@ export default function DeleteAccountScreen() {
   const [deleting, setDeleting] = useState(false);
 
   const handleDelete = () => {
-    Alert.alert('Eliminar cuenta', 'Se borran cuenta, historial, metodos, diagnosticos y preferencias de este telefono. Si el backend esta configurado, tambien se crea la solicitud remota.', [
+    Alert.alert('Eliminar cuenta', 'Se borran cuenta, historial, métodos, diagnósticos y preferencias de este teléfono. Si el backend está configurado, también se crea la solicitud remota.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -38,10 +38,10 @@ export default function DeleteAccountScreen() {
       </View>
       <Card style={styles.card}>
         <Text style={styles.heading}>{account ? account.email : 'Sin cuenta activa'}</Text>
-        <Text style={styles.body}>Google Play requiere un camino dentro de la app y otro web para pedir la eliminacion de cuenta y datos asociados.</Text>
-        <Text style={styles.body}>Podemos retener registros minimos de seguridad, fraude o cumplimiento cuando la politica publicada lo permita.</Text>
+        <Text style={styles.body}>Google Play requiere un camino dentro de la app y otro web para pedir la eliminación de cuenta y datos asociados.</Text>
+        <Text style={styles.body}>Podemos retener registros mínimos de seguridad, fraude o cumplimiento cuando la política publicada lo permita.</Text>
       </Card>
-      {!account ? <InlineNotice title="No hay cuenta local" body="Este telefono no tiene una cuenta guardada ahora." tone="warning" /> : null}
+      {!account ? <InlineNotice title="No hay cuenta local" body="Este teléfono no tiene una cuenta guardada ahora." tone="warning" /> : null}
       <PrimaryButton onPress={handleDelete} disabled={!account || deleting} style={!account || deleting ? styles.disabled : undefined}>
         {deleting ? 'Eliminando...' : 'Eliminar cuenta y datos'}
       </PrimaryButton>

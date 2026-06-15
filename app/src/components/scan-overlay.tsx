@@ -79,7 +79,7 @@ export function ScanOverlay({
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xl,

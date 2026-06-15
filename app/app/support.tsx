@@ -14,10 +14,10 @@ export default function SupportScreen() {
       </View>
       <Card style={styles.card}>
         <Text style={styles.heading}>Ayuda y revision</Text>
-        <Text style={styles.body}>Para errores de descuentos, privacidad, eliminacion de datos o problemas al abrir una billetera, manda el comercio, monto aproximado, metodo elegido y version de la app.</Text>
+        <Text style={styles.body}>Para errores de descuentos, privacidad, eliminación de datos o problemas al abrir una billetera, mandá el comercio, monto aproximado, método elegido y versión de la app.</Text>
       </Card>
       <SecondaryButton onPress={() => void Linking.openURL(LEGAL_LINKS.support)}>Contactar soporte</SecondaryButton>
-      <SecondaryButton onPress={() => router.push('/data-controls')}>Exportar diagnostico</SecondaryButton>
+      <SecondaryButton onPress={() => router.push('/data-controls')}>Exportar diagnóstico</SecondaryButton>
     </ScreenScroll>
   );
 }

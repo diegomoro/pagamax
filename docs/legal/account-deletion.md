@@ -14,13 +14,17 @@ Users can request account deletion from inside the app or from this public page.
 
 ## Delete From The Web
 
-Send an email to support@pagamenos.app with:
+Use the public deletion page:
+
+https://pagamenos.app/delete-account
+
+Until the hosted form is live, send an email to support@pagamenos.app with:
 
 - Subject: Paga Menos account deletion
 - The email address used for the Paga Menos account
 - Optional: any extra account identifier shown in the app
 
-The production public beta should replace this repository page with a hosted deletion form before Google Play submission.
+Google Play submission is blocked until the hosted HTTPS deletion page is live.
 
 ## Data Deleted
 

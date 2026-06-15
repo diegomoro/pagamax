@@ -6,8 +6,10 @@ Last updated: 2026-06-06
 
 - User accounts, sessions, and device bindings
 - Payment method preferences and provider toggles
+- Encrypted user-owned funding aliases/CVUs and alias hashes
 - QR-derived merchant and amount metadata
 - Recommendation ranking integrity
+- Signed checkout route plans and nonces
 - Remote configuration and promotion index
 - Telemetry and diagnostic events
 - Sponsored-offer budgets and performance data
@@ -29,6 +31,8 @@ Last updated: 2026-06-06
 | --- | --- | --- |
 | Malicious QR payload | Phishing, unsafe deep link, parser crash | Strict QR parser, fuzz tests, schema validation, link allowlists, safe fallback UI |
 | Deep-link spoofing | Opens wrong app or hostile URL | Provider handoff allowlist, package/bundle validation where available, user-visible destination |
+| Funding alias tampering | User funds attacker-controlled alias | Encrypted alias vault, alias hash binding, same-owner verification, signed route plans, package allowlists |
+| Route replay or double-dip claim | Duplicate top-up/payment claim or false support dispute | Short route TTL, nonce/idempotency key, provider-confirmed events only, screenshot rejection, support dual control |
 | Stale promo data | Bad recommendations, user distrust | Signed/versioned remote config, stale warnings, local fallback index, source timestamps |
 | Backend rule bypass | Unauthorized profile or telemetry access | Managed auth, server-side validation, RLS/least privilege, integration tests |
 | Account takeover | Preference theft, deletion abuse | Verified email, refresh-session rotation, device binding, rate limits, suspicious login flags |
@@ -44,10 +48,12 @@ Last updated: 2026-06-06
 - Handoff tests for allowed and disallowed URL schemes.
 - Remote config signature and version downgrade tests.
 - Account lifecycle tests: create, login, logout, reinstall restore, session expiry, delete.
+- Funding destination tests: alias normalization, same-owner verification, encrypted storage, alias-hash binding, unverified destination blocked.
+- Checkout route-plan tests: signature, nonce replay, expiry, QR hash, amount, destination alias hash, package allowlist, wrong-provider rejection.
 - Backend authorization tests for every account, telemetry, merchant, offer, and admin endpoint.
 - Telemetry redaction tests proving raw QR, credentials, card numbers, SMS, contacts, precise location, and biometric data are absent.
 - Public build reachability test proving owner split flow, alias transfer, simulated success, and payment proof UI are disabled.
 
 ## Release Rule
 
-Any failure in parser safety, backend authorization, deletion, public build gating, or telemetry redaction blocks Play submission.
+Any failure in parser safety, backend authorization, funding destination verification, checkout route-plan validation, deletion, public build gating, or telemetry redaction blocks Play submission.

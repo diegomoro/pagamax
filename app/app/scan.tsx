@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
   },
   flash: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   flashSuccess: {
     backgroundColor: 'rgba(37, 93, 98, 0.22)',

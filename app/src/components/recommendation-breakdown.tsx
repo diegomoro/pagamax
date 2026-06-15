@@ -43,7 +43,7 @@ function Metric({
   return (
     <View style={[styles.metric, highlight && styles.metricHighlight]}>
       <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={[styles.metricValue, highlight && styles.metricValueHighlight]}>{value}</Text>
+      <Text style={[styles.metricValue, highlight && styles.metricValueHighlight]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.76}>{value}</Text>
     </View>
   );
 }
@@ -54,10 +54,12 @@ const styles = StyleSheet.create({
   },
   grid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   metric: {
     flex: 1,
+    minWidth: 124,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceSoft,
     borderWidth: 1,
@@ -75,6 +77,7 @@ const styles = StyleSheet.create({
   metricValue: {
     ...typography.headingSm,
     color: colors.ink,
+    flexShrink: 1,
   },
   metricValueHighlight: {
     color: colors.teal,

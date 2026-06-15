@@ -90,8 +90,8 @@ export default function SuccessScreen() {
     return (
       <View style={styles.empty}>
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No hay decision para guardar</Text>
-          <Text style={styles.emptyBody}>Escanea un QR o busca un comercio para guardar una buena decision.</Text>
+          <Text style={styles.emptyTitle}>No hay decisión para guardar</Text>
+          <Text style={styles.emptyBody}>Escaneá un QR o buscá un comercio para guardar una buena decisión.</Text>
           <SecondaryButton onPress={() => router.replace('/scan')}>Escanear QR</SecondaryButton>
         </View>
       </View>
@@ -105,12 +105,12 @@ export default function SuccessScreen() {
   const presentation = buildRecommendationPresentation(currentSession, recommendation);
   const shareRecommendation = async () => {
     const value = presentation.netSavingsArs > 0
-      ? `me marco un ahorro estimado de ${presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}`
-      : 'me dijo cual era la opcion simple sin promo segura';
+      ? `me marcó un ahorro estimado de ${presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}`
+      : 'me dijo cuál era la opción simple sin promo segura';
 
     try {
       await Share.share({
-        message: `Antes de pagar en ${currentSession.match.merchant_name}, Paga Menos ${value}. Dos segundos y quedas como el que sabe pagar.`,
+        message: `Antes de pagar en ${currentSession.match.merchant_name}, Paga Menos ${value}. Dos segundos y quedás como el que sabe pagar.`,
       });
     } catch {
       // Sharing is optional and should not block the success flow.
@@ -125,9 +125,9 @@ export default function SuccessScreen() {
           <View style={styles.successIcon}>
             <Ionicons name="checkmark" size={30} color={colors.white} />
           </View>
-          <Text style={styles.kicker}>Decision guardada</Text>
-          <Text style={styles.title}>Ya sabes como pagar en {currentSession.match.merchant_name}</Text>
-          <Text style={styles.subtitle}>Esto no confirma pagos reales. Solo guarda la recomendacion para que la proxima compra sea mas rapida.</Text>
+          <Text style={styles.kicker}>Decisión guardada</Text>
+          <Text style={styles.title}>Ya sabés cómo pagar en {currentSession.match.merchant_name}</Text>
+          <Text style={styles.subtitle}>Esto no confirma pagos reales. Solo guarda la recomendación para que la próxima compra sea más rápida.</Text>
         </LinearGradient>
 
         <RecommendationBreakdown
@@ -138,7 +138,7 @@ export default function SuccessScreen() {
             label: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 'Alta' : 'Media',
             score: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 0.9 : 0.72,
             tone: currentSession.match.match_method === 'cuit' || currentSession.match.match_method === 'name_exact' ? 'success' : 'warning',
-            note: 'Queda guardado para que la proxima compra sea mas facil.',
+            note: 'Queda guardado para que la próxima compra sea más fácil.',
           }}
         />
 
@@ -154,18 +154,18 @@ export default function SuccessScreen() {
         </View>
 
         <View style={styles.whyCard}>
-          <Text style={styles.whyTitle}>Por que era buena idea</Text>
+          <Text style={styles.whyTitle}>Por qué era buena idea</Text>
           {presentation.qualifiers.slice(0, 3).map((reason) => (
             <Text key={reason} style={styles.whyText}>+ {reason}</Text>
           ))}
         </View>
 
         <SecondaryButton onPress={() => toggleSavedMerchant(currentSession.match.merchant_name)}>
-          {alreadySaved ? 'Quitar de accesos rapidos' : 'Guardar este lugar'}
+          {alreadySaved ? 'Quitar de accesos rápidos' : 'Guardar este lugar'}
         </SecondaryButton>
 
         <SecondaryButton onPress={() => void shareRecommendation()}>
-          Pasarselo a alguien
+          Pasárselo a alguien
         </SecondaryButton>
 
         {recordedId ? <Text style={styles.recorded}>Guardado. Ya cuenta para tu historial.</Text> : null}
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   particleLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   particle: {
     position: 'absolute',

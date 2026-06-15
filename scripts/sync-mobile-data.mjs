@@ -37,6 +37,22 @@ for (const entry of sources) {
   cpSync(entry.from, entry.to, { force: true });
 }
 
+const defaultMethodsPath = resolve(root, 'app/assets/data/default-methods.json');
+const defaultMethods = JSON.parse(readFileSync(defaultMethodsPath, 'utf8'));
+if (!Array.isArray(defaultMethods)) {
+  throw new Error(`Expected default methods array at ${defaultMethodsPath}`);
+}
+const publicDefaultMethods = defaultMethods.map((method) => ({
+  ...method,
+  ownerPhone: false,
+  canReceiveCustomerTransfer: false,
+  receivingAlias: null,
+  availableBalanceArs: null,
+  qrTransferLimitRemainingArs: null,
+  promoCapRemainingArs: null,
+}));
+writeFileSync(defaultMethodsPath, `${JSON.stringify(publicDefaultMethods, null, 2)}\n`, 'utf8');
+
 const promoIndexTextPath = resolve(root, 'app/assets/data/promo-index.bundle.txt');
 const promoIndexJsonPath = resolve(root, 'app/assets/data/promo-index.json');
 const fullPromoIndex = JSON.parse(readFileSync(promoIndexJsonPath, 'utf8'));

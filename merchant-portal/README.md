@@ -1,6 +1,6 @@
 # Merchant Portal Public Beta Scaffold
 
-The merchant portal is the B2B monetization surface for the public beta. It is separate from the consumer app so consumer trust is not diluted by advertising UI.
+The merchant portal is the B2B monetization surface for the public beta. Its job is to turn trusted checkout intent into time-discounted net profit. It is separate from the consumer app so consumer trust is not diluted by advertising UI.
 
 Initial capabilities:
 

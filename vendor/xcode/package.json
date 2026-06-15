@@ -1,0 +1,39 @@
+{
+  "author": "Apache Software Foundation",
+  "name": "xcode",
+  "description": "parser for xcodeproj/project.pbxproj files",
+  "version": "3.0.1",
+  "main": "index.js",
+  "repository": "github:apache/cordova-node-xcode",
+  "bugs": "https://github.com/apache/cordova-node-xcode/issues",
+  "engines": {
+    "node": ">=10.0.0"
+  },
+  "dependencies": {
+    "simple-plist": "^1.1.0",
+    "uuid": "11.1.1"
+  },
+  "license": "Apache-2.0",
+  "contributors": [
+    {
+      "name": "Andrew Lunny",
+      "email": "alunny@gmail.com"
+    },
+    {
+      "name": "Anis Kadri"
+    },
+    {
+      "name": "Mike Reinstein"
+    },
+    {
+      "name": "Filip Maj"
+    },
+    {
+      "name": "Brett Rudd",
+      "email": "goya@apache.org"
+    },
+    {
+      "name": "Bob Easterday"
+    }
+  ]
+}

@@ -37,7 +37,7 @@ export default function OpportunitiesScreen() {
           <View style={styles.headerWrap}>
             <View style={styles.topBar}>
               <IconButton icon="arrow-back" onPress={() => router.back()} />
-              <Text style={styles.title}>Donde puede rendir</Text>
+              <Text style={styles.title}>Dónde puede rendir</Text>
               <View style={styles.placeholder} />
             </View>
 
@@ -46,7 +46,7 @@ export default function OpportunitiesScreen() {
                 <Ionicons name="storefront-outline" size={24} color={colors.accentPressed} />
               </View>
               <Text style={styles.heroTitle}>Promos cerca tuyo</Text>
-              <Text style={styles.heroBody}>Aca gana el ahorro probable. Si un comercio paga por aparecer, queda marcado y separado.</Text>
+              <Text style={styles.heroBody}>Acá gana el ahorro probable. Si un comercio paga por aparecer, queda marcado y separado.</Text>
               <View style={styles.proofRow}>
                 <View style={styles.proofPill}>
                   <Text style={styles.proofValue}>1</Text>
@@ -58,7 +58,7 @@ export default function OpportunitiesScreen() {
                 </View>
                 <View style={styles.proofPill}>
                   <Text style={styles.proofValue}>3</Text>
-                  <Text style={styles.proofLabel}>vos elegis</Text>
+                  <Text style={styles.proofLabel}>vos elegís</Text>
                 </View>
               </View>
             </View>
@@ -66,7 +66,7 @@ export default function OpportunitiesScreen() {
             {bestOffer ? (
               <View style={styles.dealStrip}>
                 <View style={styles.dealCopy}>
-                  <Text style={styles.dealLabel}>Aca puede haber plata para vos</Text>
+                  <Text style={styles.dealLabel}>Acá puede haber plata para vos</Text>
                   <Text style={styles.dealTitle}>{bestOffer.merchantName}</Text>
                 </View>
                 <Text style={styles.dealValue}>{formatArs(bestOffer.likelyNetSavingsArs)}</Text>

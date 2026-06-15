@@ -3,6 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import type { PaymentMethodProfile, PromoIndex } from '@pagamax/core';
 import { REMOTE_PROMO_MANIFEST_URL, REMOTE_PROMO_TIMEOUT_MS } from '@/config/remote-data';
+import { sha256Hex } from '@/lib/hash';
 import type { PromoDataStatus } from '@/types/app';
 
 export interface MerchantOption {
@@ -15,6 +16,9 @@ interface RemotePromoManifest {
   version: string;
   generated_at: string;
   promo_index_url: string;
+  sha256?: string;
+  stale_after?: string;
+  built_at?: string;
 }
 
 export interface PromoIndexLoadResult {
@@ -48,6 +52,9 @@ function buildStatus(overrides: Partial<PromoDataStatus>): PromoDataStatus {
     remoteVersion: null,
     generatedAt: null,
     manifestUrl: REMOTE_PROMO_MANIFEST_URL,
+    remoteSha256: null,
+    hashVerified: false,
+    staleAt: null,
     lastCheckedAt: null,
     lastError: null,
     lastSyncStatus: REMOTE_PROMO_MANIFEST_URL ? 'idle' : 'unconfigured',
@@ -59,6 +66,25 @@ function isGenericMerchant(name: string): boolean {
   return GENERIC_MERCHANT_PATTERNS.some((pattern) => pattern.test(name));
 }
 
+function normalizeSha256(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return /^[a-f0-9]{64}$/.test(normalized) ? normalized : null;
+}
+
+function validateRemotePromoUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') {
+      throw new Error('La URL del indice remoto debe usar HTTPS.');
+    }
+    return parsed.toString();
+  } catch (caught) {
+    if (caught instanceof Error) throw caught;
+    throw new Error('La URL del indice remoto es invalida.');
+  }
+}
+
 async function ensurePromoDataDir(): Promise<void> {
   if (Platform.OS === 'web') return;
   if (!promoDataDir) return;
@@ -68,23 +94,69 @@ async function ensurePromoDataDir(): Promise<void> {
   }
 }
 
-async function readJsonFile<T>(path: string): Promise<T | null> {
+async function readTextFile(path: string): Promise<string | null> {
   if (Platform.OS === 'web') {
     const key = path === cachedManifestPath ? cachedManifestStorageKey : cachedPromoIndexStorageKey;
-    const raw = globalThis.localStorage?.getItem(key);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as T;
-    } catch {
-      return null;
-    }
+    return globalThis.localStorage?.getItem(key) ?? null;
   }
 
   const info = await FileSystem.getInfoAsync(path);
   if (!info.exists) return null;
   try {
-    const raw = await FileSystem.readAsStringAsync(path);
+    return await FileSystem.readAsStringAsync(path);
+  } catch {
+    return null;
+  }
+}
+
+async function readJsonFile<T>(path: string): Promise<T | null> {
+  const raw = await readTextFile(path);
+  if (!raw) return null;
+
+  try {
     return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function parseVerifiedRemotePromoIndex(raw: string, manifest: RemotePromoManifest): PromoIndex {
+  const expectedSha256 = normalizeSha256(manifest.sha256);
+  if (!expectedSha256) {
+    throw new Error('Manifest remoto sin SHA-256 valido.');
+  }
+
+  const actualSha256 = sha256Hex(raw);
+  if (actualSha256 !== expectedSha256) {
+    throw new Error('Hash SHA-256 remoto no coincide; se conserva la base local.');
+  }
+
+  return JSON.parse(raw) as PromoIndex;
+}
+
+async function loadCachedPromoIndex(): Promise<PromoIndexLoadResult | null> {
+  const [manifest, rawPromoIndex] = await Promise.all([
+    readJsonFile<RemotePromoManifest>(cachedManifestPath),
+    readTextFile(cachedPromoIndexPath),
+  ]);
+
+  if (!manifest || !rawPromoIndex) return null;
+
+  try {
+    const promoIndex = parseVerifiedRemotePromoIndex(rawPromoIndex, manifest);
+    const remoteSha256 = normalizeSha256(manifest.sha256);
+    return {
+      promoIndex,
+      status: buildStatus({
+        source: 'cached_remote',
+        localVersion: manifest.version,
+        remoteVersion: manifest.version,
+        generatedAt: manifest.generated_at,
+        remoteSha256,
+        hashVerified: remoteSha256 != null,
+        staleAt: manifest.stale_after ?? null,
+      }),
+    };
   } catch {
     return null;
   }
@@ -114,26 +186,7 @@ async function loadBundledPromoIndexWithStatus(): Promise<PromoIndexLoadResult> 
   };
 }
 
-async function loadCachedPromoIndex(): Promise<PromoIndexLoadResult | null> {
-  const [manifest, promoIndex] = await Promise.all([
-    readJsonFile<RemotePromoManifest>(cachedManifestPath),
-    readJsonFile<PromoIndex>(cachedPromoIndexPath),
-  ]);
-
-  if (!manifest || !promoIndex) return null;
-
-  return {
-    promoIndex,
-    status: buildStatus({
-      source: 'cached_remote',
-      localVersion: manifest.version,
-      remoteVersion: manifest.version,
-      generatedAt: manifest.generated_at,
-    }),
-  };
-}
-
-async function fetchJson<T>(url: string): Promise<T> {
+async function fetchText(url: string): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REMOTE_PROMO_TIMEOUT_MS);
 
@@ -142,10 +195,15 @@ async function fetchJson<T>(url: string): Promise<T> {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    return await response.json() as T;
+    return await response.text();
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const raw = await fetchText(url);
+  return JSON.parse(raw) as T;
 }
 
 export async function loadInitialPromoIndex(): Promise<PromoIndexLoadResult> {
@@ -163,29 +221,36 @@ export async function syncRemotePromoIndex(currentVersion: string | null): Promi
   if (!manifest.version || !manifest.promo_index_url) {
     throw new Error('Manifest remoto invalido.');
   }
+  const promoIndexUrl = validateRemotePromoUrl(manifest.promo_index_url);
 
   if (manifest.version === currentVersion) {
+    const cached = await loadCachedPromoIndex();
+    const fallback = cached ?? await loadBundledPromoIndexWithStatus();
     return {
-      promoIndex: (await loadCachedPromoIndex())?.promoIndex ?? (await loadBundledPromoIndexWithStatus()).promoIndex,
+      promoIndex: fallback.promoIndex,
       status: buildStatus({
-        source: currentVersion ? 'cached_remote' : 'bundled',
-        localVersion: currentVersion,
+        source: cached ? 'cached_remote' : 'bundled',
+        localVersion: fallback.status.localVersion ?? currentVersion,
         remoteVersion: manifest.version,
         generatedAt: manifest.generated_at,
+        remoteSha256: normalizeSha256(manifest.sha256),
+        hashVerified: cached?.status.hashVerified ?? false,
+        staleAt: manifest.stale_after ?? cached?.status.staleAt ?? null,
         lastCheckedAt: new Date().toISOString(),
         lastSyncStatus: 'up_to_date',
       }),
     };
   }
 
-  const promoIndex = await fetchJson<PromoIndex>(manifest.promo_index_url);
+  const rawPromoIndex = await fetchText(promoIndexUrl);
+  const promoIndex = parseVerifiedRemotePromoIndex(rawPromoIndex, manifest);
   if (Platform.OS === 'web') {
-    globalThis.localStorage?.setItem(cachedPromoIndexStorageKey, JSON.stringify(promoIndex));
+    globalThis.localStorage?.setItem(cachedPromoIndexStorageKey, rawPromoIndex);
     globalThis.localStorage?.setItem(cachedManifestStorageKey, JSON.stringify(manifest));
   } else {
     await ensurePromoDataDir();
     await Promise.all([
-      FileSystem.writeAsStringAsync(cachedPromoIndexPath, JSON.stringify(promoIndex)),
+      FileSystem.writeAsStringAsync(cachedPromoIndexPath, rawPromoIndex),
       FileSystem.writeAsStringAsync(cachedManifestPath, JSON.stringify(manifest)),
     ]);
   }
@@ -197,6 +262,9 @@ export async function syncRemotePromoIndex(currentVersion: string | null): Promi
       localVersion: manifest.version,
       remoteVersion: manifest.version,
       generatedAt: manifest.generated_at,
+      remoteSha256: normalizeSha256(manifest.sha256),
+      hashVerified: true,
+      staleAt: manifest.stale_after ?? null,
       lastCheckedAt: new Date().toISOString(),
       lastSyncStatus: 'updated',
     }),

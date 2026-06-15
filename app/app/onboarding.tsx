@@ -36,13 +36,13 @@ export default function OnboardingScreen() {
           </View>
           <View style={styles.scanCopy}>
             <Text style={styles.scanTitle}>Escanear QR</Text>
-            <Text style={styles.scanBody}>Lo unico que tenes que acordarte: antes de pagar, apunta aca.</Text>
+            <Text style={styles.scanBody}>Lo único que tenés que acordarte: antes de pagar, apuntá acá.</Text>
           </View>
         </View>
         <View style={styles.benefits}>
-          <Chip label="Escanear antes de pagar" selected />
-        <Chip label="Promos al toque" selected />
-          <Chip label="Vos confirmas siempre" selected />
+          <Chip label="Escaneá antes de pagar" selected />
+          <Chip label="Promos al toque" selected />
+          <Chip label="Vos confirmás siempre" selected />
         </View>
       </Card>
 
@@ -77,8 +77,8 @@ export default function OnboardingScreen() {
           </>
         ) : (
           <>
-            <PrimaryButton onPress={finish}>{account ? 'Escanear mi primer QR' : 'Crear cuenta'}</PrimaryButton>
-            <SecondaryButton onPress={() => setStep((prev) => Math.max(0, prev - 1))}>Atras</SecondaryButton>
+            <PrimaryButton onPress={finish}>{account ? 'Escaneá mi primer QR' : 'Crear cuenta'}</PrimaryButton>
+            <SecondaryButton onPress={() => setStep((prev) => Math.max(0, prev - 1))}>Atrás</SecondaryButton>
           </>
         )}
       </View>

@@ -51,7 +51,7 @@ Raw operational events are kept short-term for debugging and abuse prevention. L
 
 Users can request deletion in the app from Profile > Data and privacy > Delete account, or by using the public deletion page:
 
-https://github.com/diegomoro/pagamax/blob/public/play-beta/docs/legal/account-deletion.md
+https://pagamenos.app/delete-account
 
 Deletion removes the profile, aliases, saved merchants, payment method configuration, diagnostics tied to the user id, and telemetry identifiers from active systems, except limited security, fraud, audit, and legal records.
 

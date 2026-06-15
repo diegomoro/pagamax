@@ -74,7 +74,8 @@ export default function HomeScreen() {
     }).length;
   }, [activity]);
   const monthlyGoalArs = 25000;
-  const goalProgress = Math.min(1, displaySummary.monthlyNetSavingsArs / monthlyGoalArs);
+  const goalProgress = Math.max(0, Math.min(1, displaySummary.monthlyNetSavingsArs / monthlyGoalArs));
+  const goalProgressPercent = Math.round(goalProgress * 100);
   const smartStreak = hasRealActivity ? Math.min(7, Math.max(1, checksThisMonth)) : 3;
   const bestNearbyPromo = DEMO_OPPORTUNITIES.find((item) => item.placement !== 'sponsored') ?? DEMO_OPPORTUNITIES[0];
   const merchantSpotlight = DEMO_OPPORTUNITIES.find((item) => item.placement === 'sponsored');
@@ -188,10 +189,10 @@ export default function HomeScreen() {
                 <Text style={styles.momentumTitle}>Ahorro del mes</Text>
                 <Text style={styles.momentumBody}>{smartStreak} compras revisadas. Objetivo: ahorrar {formatArs(monthlyGoalArs)}.</Text>
               </View>
-              <Text style={styles.momentumPercent}>{Math.round(goalProgress * 100)}%</Text>
+              <Text style={styles.momentumPercent}>{goalProgressPercent}%</Text>
             </View>
             <View style={styles.goalTrack}>
-              <View style={[styles.goalFill, { width: `${Math.max(8, Math.round(goalProgress * 100))}%` }]} />
+              {goalProgressPercent > 0 ? <View style={[styles.goalFill, { width: `${goalProgressPercent}%` }]} /> : null}
             </View>
           </View>
 
@@ -264,12 +265,12 @@ export default function HomeScreen() {
         />
         <ToggleRow
           title="Modo de optimizacion"
-          body={settings.optimizationMode === 'max_savings' ? 'Busca mas plata para vos.' : 'Busca menos vueltas.'}
+          body={settings.optimizationMode === 'max_savings' ? 'Busca más plata para vos.' : 'Busca menos vueltas.'}
           value={settings.optimizationMode === 'fastest_checkout'}
           onValueChange={(value) => updateSettings({ optimizationMode: value ? 'fastest_checkout' : 'max_savings' })}
         />
         <SecondaryButton onPress={() => router.push('/profile')}>Abrir preferencias</SecondaryButton>
-        <SecondaryButton onPress={() => router.push('/privacy')}>Politica de privacidad</SecondaryButton>
+        <SecondaryButton onPress={() => router.push('/privacy')}>Política de privacidad</SecondaryButton>
       </BottomSheet>
     </>
   );

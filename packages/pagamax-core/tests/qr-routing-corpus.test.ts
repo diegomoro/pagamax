@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import {
   getMatchedCandidates,
   matchQr,
-  recommendPagamaxRoutes,
   type PaymentMethodProfile,
   type PromoIndex,
 } from '../src/index.js';
+import { recommendPagamaxRoutes } from '../src/owner-routing.js';
 
 interface QrPaymentScenario {
   id: string;

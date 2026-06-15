@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "app",
+    "backend/public-beta",
     "packages/*",
     "scraper"
   ],
@@ -12,22 +13,51 @@
     "mobile:preview": "npm run build:preview --workspace @pagamax/app",
     "data:refresh": "node ./scripts/run-daily-promo-refresh.mjs",
     "data:publish": "node ./scripts/build-remote-promo-site.mjs",
+    "data:health": "node ./scripts/check-remote-promo-health.mjs",
     "data:sync": "node ./scripts/sync-mobile-data.mjs",
+    "qr:real": "node ./scripts/real-qr-test-runner.mjs",
+    "qr:real:new": "node ./scripts/real-qr-test-runner.mjs new",
+    "qr:real:open-scan": "node ./scripts/real-qr-test-runner.mjs open-scan",
+    "qr:real:checkpoint": "node ./scripts/real-qr-test-runner.mjs checkpoint",
+    "qr:real:list": "node ./scripts/real-qr-test-runner.mjs list",
+    "qr:real:report": "node ./scripts/real-qr-test-runner.mjs report",
+    "qr:real:summary": "node ./scripts/real-qr-test-runner.mjs summary",
+    "qr:targets": "node ./scripts/find-real-qr-test-targets.mjs",
+    "qr:kit": "node ./scripts/build-qr-ready-kit.mjs",
+    "routes:matrix": "npm exec --workspace pagamax-scraper -- tsx ../scripts/check-main-funding-route-matrix.ts",
+    "liquidity:matrix": "npm exec --workspace pagamax-scraper -- tsx ../scripts/check-liquidity-pair-capability-matrix.ts",
+    "wallet:handoff-smoke": "node ./scripts/run-wallet-handoff-smoke.mjs",
     "public:check": "node ./scripts/check-public-build.mjs",
+    "backend:build": "npm run build --workspace @pagamax/public-beta-backend",
+    "backend:test": "npm run test --workspace @pagamax/public-beta-backend",
     "core:test": "npm run test --workspace @pagamax/core",
     "core:build": "npm run build --workspace @pagamax/core"
   },
   "overrides": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "@types/react": "19.1.10",
-    "@xmldom/xmldom": "0.9.10",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "@types/react": "19.2.14",
+    "@xmldom/xmldom": "0.8.13",
     "postcss": "8.5.15",
-    "uuid": "11.1.1"
+    "shell-quote": "1.8.4",
+    "uuid": "11.1.1",
+    "@expo/metro-config": {
+      "postcss": "8.5.15"
+    },
+    "vite": {
+      "postcss": "8.5.15"
+    },
+    "xcode": "file:vendor/xcode"
   },
   "devDependencies": {
-    "@types/react": "19.1.10",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "@types/react": "19.2.14",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "dependencies": {
+    "postcss": "8.5.15",
+    "shell-quote": "1.8.4",
+    "uuid": "11.1.1",
+    "xcode": "file:vendor/xcode"
   }
 }

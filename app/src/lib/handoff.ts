@@ -1,7 +1,7 @@
 import { Linking } from 'react-native';
+import type { LiquidityRouteRecommendation, PaymentRecommendation } from '@pagamax/core';
 import { getPaymentAppConfig, isAllowedAndroidPackage, isAllowedPaymentAppUrl } from '@/config/payment-apps';
 import type { RecommendationSession } from '@/types/app';
-import type { PaymentRecommendation } from '@pagamax/core';
 
 export type HandoffOutcome = 'payment_flow' | 'app' | 'store';
 
@@ -29,38 +29,76 @@ function formatArs(value: number | undefined): string {
   return value!.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 }
 
+function isLiquidityRoute(recommendation: PaymentRecommendation): recommendation is LiquidityRouteRecommendation {
+  return 'routeTier' in recommendation;
+}
+
 export function buildPaymentHandoffPlan(
   session: RecommendationSession,
   recommendation: PaymentRecommendation,
 ): PaymentHandoffPlan {
-  const config = getPaymentAppConfig(recommendation.method.provider);
+  const liquidityRoute = isLiquidityRoute(recommendation) ? recommendation : null;
+  const targetConfig = getPaymentAppConfig(recommendation.method.provider);
+  const fundingConfig = liquidityRoute?.routeTier === 'instant_top_up_then_pay' || liquidityRoute?.routeTier === 'prepared_route'
+    ? getPaymentAppConfig(liquidityRoute.sourceAccount.provider)
+    : targetConfig;
   const amount = session.amountEstimated ? undefined : session.amountArs;
   const merchant = session.match.merchant_name || session.merchantInput || 'comercio detectado';
   const hasUsefulDiscount = recommendation.valueType !== 'fallback' && recommendation.estimatedSavingsArs > 0;
-  const needsManualQrScan = !config.canReceiveQrPayload;
-  const confidenceLabel = config.canReceiveQrPayload
+  const routeCopy = hasUsefulDiscount
+    ? `Elegida por ahorro estimado de ${formatArs(recommendation.estimatedSavingsArs)}.`
+    : 'Sin descuento confirmado; usá tu billetera principal con saldo.';
+
+  if (liquidityRoute?.routeTier === 'instant_top_up_then_pay') {
+    return {
+      provider: fundingConfig.provider,
+      label: fundingConfig.label,
+      primaryLabel: fundingConfig.canOpenApp ? `Mover desde ${fundingConfig.label}` : `Buscar ${fundingConfig.label}`,
+      confidenceLabel: 'manual verification needed',
+      supportsQrPayload: false,
+      supportsAmount: false,
+      needsManualQrScan: true,
+      instruction: `Se abrirá ${fundingConfig.label}. Mové ${formatArs(liquidityRoute.amountToMoveArs)} a ${targetConfig.label} y confirmá que llegó. Después abrí ${targetConfig.label}, escaneá el QR de ${merchant} y revisá ${formatArs(amount)} antes de pagar.`,
+      detail: `${routeCopy} Ruta: ${liquidityRoute.sourceAccount.label} a ${liquidityRoute.targetAccount.label} y pago con ${targetConfig.label}. Paga Menos no confirma transferencias ni pagos.`,
+      returnInstruction: `Cuando el saldo llegue a ${targetConfig.label}, abrí esa app para pagar el QR. Después podés guardar la decisión.`,
+    };
+  }
+
+  if (liquidityRoute?.routeTier === 'prepared_route') {
+    return {
+      provider: fundingConfig.provider,
+      label: fundingConfig.label,
+      primaryLabel: fundingConfig.canOpenApp ? `Preparar ${targetConfig.label}` : `Buscar ${fundingConfig.label}`,
+      confidenceLabel: 'manual verification needed',
+      supportsQrPayload: false,
+      supportsAmount: false,
+      needsManualQrScan: true,
+      instruction: `Esta ruta no es rápida para la fila. Preparala antes: mové ${formatArs(liquidityRoute.amountToMoveArs)} de ${fundingConfig.label} a ${targetConfig.label}; en caja pagá el QR con ${targetConfig.label}.`,
+      detail: `${routeCopy} La transferencia no está certificada como instantánea para checkout.`,
+      returnInstruction: 'Guardá la decisión solo como ruta preparada. Paga Menos no registra pagos reales.',
+    };
+  }
+
+  const needsManualQrScan = !targetConfig.canReceiveQrPayload;
+  const confidenceLabel = targetConfig.canReceiveQrPayload
     ? 'high confidence'
-    : config.canDeepLinkToPaymentFlow
+    : targetConfig.canDeepLinkToPaymentFlow
       ? 'estimated'
       : 'manual verification needed';
 
-  const routeCopy = hasUsefulDiscount
-    ? `Elegida por ahorro estimado de ${formatArs(recommendation.estimatedSavingsArs)}.`
-    : 'Sin descuento confirmado; usa tu metodo configurado por defecto.';
-
   return {
-    provider: config.provider,
-    label: config.label,
-    primaryLabel: config.canOpenApp ? `Abrir ${config.label}` : `Buscar ${config.label}`,
+    provider: targetConfig.provider,
+    label: targetConfig.label,
+    primaryLabel: targetConfig.canOpenApp ? `Abrir ${targetConfig.label}` : `Buscar ${targetConfig.label}`,
     confidenceLabel,
-    supportsQrPayload: config.canReceiveQrPayload,
-    supportsAmount: config.canReceiveAmount,
+    supportsQrPayload: targetConfig.canReceiveQrPayload,
+    supportsAmount: targetConfig.canReceiveAmount,
     needsManualQrScan,
     instruction: !needsManualQrScan
-      ? `Se abrirá ${config.label} con el QR detectado. Revisá antes de confirmar.`
-      : `Se abrirá ${config.label}. Abrí el lector QR en esa app y pagá a ${merchant} por ${formatArs(amount)}. Confirmá solo dentro de ${config.label}.`,
-    detail: `${routeCopy} ${config.fallbackBehavior}`,
-    returnInstruction: `Al volver, podes guardar la decision. Paga Menos no confirma ni registra pagos reales.`,
+      ? `Se abrirá ${targetConfig.label} con el QR detectado. Revisá antes de confirmar.`
+      : `Se abrirá ${targetConfig.label}. Abrí el lector QR en esa app y pagá a ${merchant} por ${formatArs(amount)}. Confirmá solo dentro de ${targetConfig.label}.`,
+    detail: `${routeCopy} ${targetConfig.fallbackBehavior}`,
+    returnInstruction: 'Al volver, podés guardar la decisión. Paga Menos no confirma ni registra pagos reales.',
   };
 }
 

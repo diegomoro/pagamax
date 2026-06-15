@@ -2,7 +2,7 @@
 
 Date: 2026-06-04
 
-Objective: maximize repeat retail usage and merchant willingness to pay without breaking trust. Target score is 20/20: 10/10 retail experience plus 10/10 merchant value.
+Objective: maximize time-discounted net profit by increasing repeat retail usage and merchant willingness to pay without breaking trust. Target score is 20/20: 10/10 retail experience plus 10/10 merchant value. Retail habit and merchant demand are means to the profit objective; trust, speed, and legal safety are constraints because damaging them reduces future profit.
 
 ## Ideal retail user
 

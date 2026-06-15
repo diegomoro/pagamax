@@ -20,7 +20,7 @@ export function BrandLockup({
       <View style={styles.copy}>
         <Text style={[styles.name, compact && styles.nameCompact]}>Paga Menos</Text>
         {showTagline ? <Text style={styles.tagline}>Escaneás. Ahorrás. Listo.</Text> : null}
-        {showHolding ? <Text style={styles.holding}>Una app de Pagamax</Text> : null}
+        {showHolding ? <Text style={styles.holding}>Independiente de bancos y billeteras</Text> : null}
       </View>
     </View>
   );

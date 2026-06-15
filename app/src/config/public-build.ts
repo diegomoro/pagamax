@@ -2,7 +2,14 @@ declare const process: {
   env?: Record<string, string | undefined>;
 };
 
+import Constants from 'expo-constants';
+
 const env = typeof process !== 'undefined' ? process.env ?? {} : {};
+const extra = Constants.expoConfig?.extra ?? {};
+
+function readString(name: string, extraName: string): string {
+  return env[name]?.trim() || (typeof extra[extraName] === 'string' ? extra[extraName].trim() : '');
+}
 
 function readBoolean(name: string, fallback: boolean): boolean {
   const value = env[name];
@@ -28,17 +35,22 @@ export const PAYMENT_PROOF_ENABLED = readBoolean(
   !IS_PUBLIC_BUILD,
 ) && OWNER_SPLIT_FLOW_ENABLED;
 
+export const FUNDING_DESTINATIONS_ENABLED = readBoolean(
+  'EXPO_PUBLIC_FUNDING_DESTINATIONS',
+  false,
+) && !PUBLIC_RECOMMENDATION_ONLY;
+
 export const KILL_SWITCH_ENABLED = readBoolean('EXPO_PUBLIC_KILL_SWITCH', false);
 
-export const PUBLIC_BACKEND_API_URL = env.EXPO_PUBLIC_BACKEND_API_URL?.trim() || '';
+export const PUBLIC_BACKEND_API_URL = readString('EXPO_PUBLIC_BACKEND_API_URL', 'backendApiUrl');
 
 export const LEGAL_LINKS = {
-  privacyPolicy: env.EXPO_PUBLIC_PRIVACY_URL?.trim()
-    || 'https://github.com/diegomoro/pagamax/blob/public/play-beta/docs/legal/privacy-policy.md',
-  terms: env.EXPO_PUBLIC_TERMS_URL?.trim()
-    || 'https://github.com/diegomoro/pagamax/blob/public/play-beta/docs/legal/terms.md',
-  accountDeletion: env.EXPO_PUBLIC_ACCOUNT_DELETION_URL?.trim()
-    || 'https://github.com/diegomoro/pagamax/blob/public/play-beta/docs/legal/account-deletion.md',
-  support: env.EXPO_PUBLIC_SUPPORT_URL?.trim()
-    || 'mailto:support@pagamenos.app',
+  privacyPolicy: readString('EXPO_PUBLIC_PRIVACY_URL', 'privacyUrl')
+    || 'https://pagamax-public-beta-backend.vercel.app/privacy',
+  terms: readString('EXPO_PUBLIC_TERMS_URL', 'termsUrl')
+    || 'https://pagamax-public-beta-backend.vercel.app/terms',
+  accountDeletion: readString('EXPO_PUBLIC_ACCOUNT_DELETION_URL', 'accountDeletionUrl')
+    || 'https://pagamax-public-beta-backend.vercel.app/delete-account',
+  support: readString('EXPO_PUBLIC_SUPPORT_URL', 'supportUrl')
+    || 'https://pagamax-public-beta-backend.vercel.app/support',
 };

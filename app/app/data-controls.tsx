@@ -5,12 +5,13 @@ import { usePagamax } from '@/context/pagamax-context';
 import { colors, spacing, typography } from '@/lib/theme';
 
 export default function DataControlsScreen() {
-  const { diagnostics, settings, updateSettings } = usePagamax();
+  const { diagnostics, promoDataStatus, settings, updateSettings } = usePagamax();
 
   const exportDiagnostics = async () => {
     await Share.share({
       message: JSON.stringify({
         exportedAt: new Date().toISOString(),
+        promoDataStatus,
         diagnostics: diagnostics.slice(0, 20),
       }, null, 2),
     });
@@ -25,7 +26,7 @@ export default function DataControlsScreen() {
       </View>
       <Card style={styles.card}>
         <ToggleRow
-          title="Analitica"
+          title="Analítica"
           body="Eventos de uso, ranking y apertura de apps, sin credenciales ni QR completo."
           value={settings.analyticsEnabled}
           onValueChange={(value) => updateSettings({ analyticsEnabled: value })}
@@ -43,7 +44,7 @@ export default function DataControlsScreen() {
           onValueChange={(value) => updateSettings({ sponsoredOffersEnabled: value })}
         />
       </Card>
-      <SecondaryButton onPress={() => void exportDiagnostics()}>Exportar diagnostico</SecondaryButton>
+      <SecondaryButton onPress={() => void exportDiagnostics()}>Exportar diagnóstico</SecondaryButton>
       <SecondaryButton onPress={() => router.push('/delete-account')}>Eliminar cuenta y datos</SecondaryButton>
     </ScreenScroll>
   );

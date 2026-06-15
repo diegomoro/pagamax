@@ -6,7 +6,13 @@
     "rail": "qr",
     "walletLabel": "Mercado Pago",
     "cardType": "account_money",
-    "isDefault": true
+    "isDefault": true,
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
   },
   {
     "id": "naranjax-balance-qr",
@@ -14,7 +20,13 @@
     "label": "Naranja X",
     "rail": "qr",
     "walletLabel": "Naranja X",
-    "cardType": "account_money"
+    "cardType": "account_money",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
   },
   {
     "id": "bbva-mastercard-black-qr",
@@ -23,7 +35,13 @@
     "rail": "qr",
     "walletLabel": "BBVA",
     "cardBrand": "Mastercard",
-    "cardType": "credit"
+    "cardType": "credit",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
   },
   {
     "id": "bbva-visa-signature-qr",
@@ -32,7 +50,28 @@
     "rail": "qr",
     "walletLabel": "BBVA",
     "cardBrand": "Visa",
-    "cardType": "credit"
+    "cardType": "credit",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
+  },
+  {
+    "id": "bbva-debit-qr",
+    "provider": "bbva",
+    "label": "BBVA Debito",
+    "rail": "qr",
+    "walletLabel": "BBVA",
+    "cardBrand": "Visa",
+    "cardType": "debit",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
   },
   {
     "id": "carrefour-bank-qr",
@@ -40,23 +79,41 @@
     "label": "Banco Carrefour",
     "rail": "qr",
     "walletLabel": "Banco Carrefour",
-    "cardType": "account_money"
+    "cardType": "account_money",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
   },
   {
-    "id": "bna-plus-qr",
+    "id": "bna-plus-wallet-qr",
     "provider": "bna",
     "label": "BNA+ QR",
     "rail": "qr",
     "walletLabel": "BNA+",
-    "cardType": "debit"
+    "cardType": "debit",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
   },
   {
-    "id": "bancon-debit-qr",
+    "id": "bancon-wallet-qr",
     "provider": "bancon",
-    "label": "Bancon debit",
+    "label": "Bancon",
     "rail": "qr",
     "walletLabel": "Bancon",
-    "cardType": "debit"
+    "cardType": "debit",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
   },
   {
     "id": "personalpay-prepaid-qr",
@@ -65,6 +122,40 @@
     "rail": "qr",
     "walletLabel": "Personal Pay",
     "cardBrand": "Visa",
-    "cardType": "prepaid"
+    "cardType": "prepaid",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
+  },
+  {
+    "id": "shellbox-wallet-qr",
+    "provider": "shellbox",
+    "label": "Shell Box",
+    "rail": "qr",
+    "walletLabel": "Shell Box",
+    "cardType": "account_money",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
+  },
+  {
+    "id": "ypf-app-wallet-qr",
+    "provider": "ypf",
+    "label": "YPF App",
+    "rail": "qr",
+    "walletLabel": "YPF App",
+    "cardType": "account_money",
+    "ownerPhone": false,
+    "canReceiveCustomerTransfer": false,
+    "receivingAlias": null,
+    "availableBalanceArs": null,
+    "qrTransferLimitRemainingArs": null,
+    "promoCapRemainingArs": null
   }
 ]

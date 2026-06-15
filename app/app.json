@@ -2,12 +2,11 @@
   "expo": {
     "name": "Paga Menos",
     "slug": "paga-menos",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "scheme": "pagamenos",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "assetBundlePatterns": [
       "assets/icon.png",
       "assets/adaptive-icon.png",
@@ -16,17 +15,12 @@
       "assets/data/promo-index.bundle.txt",
       "assets/data/default-methods.json"
     ],
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.pagamenos.app",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f666a"
@@ -34,7 +28,13 @@
       "permissions": [
         "android.permission.CAMERA"
       ],
-      "edgeToEdgeEnabled": true,
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "allowBackup": false,
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
@@ -42,17 +42,23 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Paga Menos usa la camara para escanear codigos QR de comercios."
+          "cameraPermission": "Paga Menos usa la cámara para escanear códigos QR de comercios."
         }
       ],
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "expo-status-bar"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "router": {},
+      "backendApiUrl": "https://pagamax-public-beta-backend.vercel.app",
+      "privacyUrl": "https://pagamax-public-beta-backend.vercel.app/privacy",
+      "termsUrl": "https://pagamax-public-beta-backend.vercel.app/terms",
+      "accountDeletionUrl": "https://pagamax-public-beta-backend.vercel.app/delete-account",
+      "supportUrl": "https://pagamax-public-beta-backend.vercel.app/support",
       "eas": {
         "projectId": "3ecd4a17-ce58-4809-8a36-dfd5269b0853"
       }

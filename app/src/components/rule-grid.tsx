@@ -32,7 +32,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   card: {
-    width: '48%',
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: 148,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceSoft,
     borderWidth: 1,
@@ -52,5 +54,6 @@ const styles = StyleSheet.create({
   value: {
     ...typography.headingSm,
     color: colors.ink,
+    flexShrink: 1,
   },
 });

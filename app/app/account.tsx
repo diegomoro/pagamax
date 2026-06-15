@@ -39,7 +39,7 @@ export default function AccountScreen() {
     }
 
     if (!isValidEmail(email)) {
-      setError('Usa un email valido.');
+      setError('Usá un email válido.');
       return;
     }
 
@@ -63,14 +63,18 @@ export default function AccountScreen() {
     setError(null);
     setAuthMessage(null);
     if (!isValidEmail(email)) {
-      setError('Usa un email valido para recibir el link.');
+      setError('Usá un email válido para recibir el link.');
       return;
     }
 
     setSendingLink(true);
     try {
-      const result = await requestAccountMagicLink(email.trim());
-      setAuthMessage(result ? 'Te mandamos el link de acceso al email.' : 'Falta configurar el backend público para mandar links de acceso.');
+      const result = await requestAccountMagicLink(email.trim(), displayName.trim() || undefined);
+      setAuthMessage(result?.devExchangeUrl
+        ? `Modo dev: abre ${result.devExchangeUrl}`
+        : result
+          ? 'Te mandamos el link de acceso al email.'
+          : 'Falta configurar el backend público para mandar links de acceso.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'No se pudo enviar el link.');
     } finally {
@@ -79,7 +83,7 @@ export default function AccountScreen() {
   }
 
   function handleSignOut() {
-    Alert.alert('Cerrar sesion', 'Se cierra la sesion de este telefono. Tus datos sincronizados siguen disponibles hasta que elimines la cuenta.', [
+    Alert.alert('Cerrar sesión', 'Se cierra la sesión de este teléfono. Tus datos sincronizados siguen disponibles hasta que elimines la cuenta.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Cerrar',
@@ -142,7 +146,7 @@ export default function AccountScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Telefono</Text>
+          <Text style={styles.label}>Teléfono</Text>
           <TextInput
             autoCapitalize="sentences"
             autoCorrect={false}
@@ -181,7 +185,7 @@ export default function AccountScreen() {
           </SecondaryButton>
         ) : null}
         {account ? (
-          <SecondaryButton onPress={handleSignOut}>Cerrar sesion</SecondaryButton>
+          <SecondaryButton onPress={handleSignOut}>Cerrar sesión</SecondaryButton>
         ) : (
           <SecondaryButton onPress={() => router.replace('/')}>Ahora no</SecondaryButton>
         )}
@@ -228,6 +232,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   label: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  help: {
     ...typography.caption,
     color: colors.inkMuted,
   },

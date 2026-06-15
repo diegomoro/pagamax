@@ -23,7 +23,7 @@ export function SavingsSummaryCard({
         <Ionicons name={icon} size={18} color={tone === 'accent' ? colors.accentPressed : tone === 'teal' ? colors.teal : colors.inkMuted} />
         <Text style={styles.label}>{label}</Text>
       </View>
-      <Text style={styles.value}>{value}</Text>
+      <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{value}</Text>
       <Text style={styles.footnote}>{footnote}</Text>
     </Card>
   );
@@ -32,7 +32,7 @@ export function SavingsSummaryCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    minWidth: 160,
+    minWidth: 156,
     gap: spacing.sm,
   },
   cardTeal: {
@@ -53,6 +53,7 @@ const styles = StyleSheet.create({
   value: {
     ...typography.displaySm,
     color: colors.ink,
+    flexShrink: 1,
   },
   footnote: {
     ...typography.bodySm,

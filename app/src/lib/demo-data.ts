@@ -10,7 +10,7 @@ export const DEMO_ACTIVITY: SavingsActivity[] = [
     pagamaxFeeArs: 1312,
     netSavingsArs: 6888,
     provider: 'modo',
-    methodLabel: 'MODO Visa credito',
+    methodLabel: 'MODO Visa crédito',
     confidence: {
       label: 'Alta',
       score: 0.91,
@@ -29,12 +29,12 @@ export const DEMO_ACTIVITY: SavingsActivity[] = [
     pagamaxFeeArs: 688,
     netSavingsArs: 3612,
     provider: 'naranjax',
-    methodLabel: 'Naranja X debito',
+    methodLabel: 'Naranja X débito',
     confidence: {
       label: 'Media',
       score: 0.76,
       tone: 'warning',
-      note: 'La promo aplica, pero dependia del dia y del tope vigente.',
+      note: 'La promo aplica, pero dependía del día y del tope vigente.',
     },
     createdAt: '2026-06-01T13:05:00.000Z',
     source: 'manual',
@@ -96,7 +96,7 @@ export const DEMO_OPPORTUNITIES: MerchantOpportunity[] = [
       tone: 'warning',
       note: 'Conviene mirar dia y tope antes de pagar.',
     },
-    reason: 'Farmacia es de las compras donde mas facil se te escapa una promo.',
+    reason: 'Farmacia es de las compras donde más fácil se te escapa una promo.',
     providerHint: 'Naranja X',
     distanceLabel: '1.2 km',
     tags: ['farmacia', 'pagado claro'],
@@ -119,7 +119,7 @@ export const DEMO_OPPORTUNITIES: MerchantOpportunity[] = [
     reason: 'Si cargas seguido, mirar el QR antes de pagar puede sumar bastante.',
     providerHint: 'Personal Pay',
     distanceLabel: '2.1 km',
-    tags: ['combustible', 'rapido'],
+    tags: ['combustible', 'rápido'],
   },
   {
     id: 'opp-carrefour',
@@ -127,7 +127,7 @@ export const DEMO_OPPORTUNITIES: MerchantOpportunity[] = [
     category: 'Supermercados',
     placement: 'sponsored',
     placementLabel: 'Pagado, marcado',
-    placementReason: 'Promocionado y separado de la mejor opcion. El ahorro estimado queda visible.',
+    placementReason: 'Promocionado y separado de la mejor opción. El ahorro estimado queda visible.',
     likelyGrossSavingsArs: 6100,
     likelyNetSavingsArs: 5124,
     confidence: {
@@ -136,7 +136,7 @@ export const DEMO_OPPORTUNITIES: MerchantOpportunity[] = [
       tone: 'warning',
       note: 'La propuesta es buena, pero los topes cambian seguido.',
     },
-    reason: 'Compra familiar y ticket grande: buen momento para revisar con que pagar.',
+    reason: 'Compra familiar y ticket grande: buen momento para revisar con qué pagar.',
     providerHint: 'BBVA',
     tags: ['super', 'familia'],
   },
@@ -156,13 +156,13 @@ export const DEMO_MISSED_OPPORTUNITIES = [
 export const ONBOARDING_PAGES = [
   {
     id: 'welcome',
-    title: 'Antes de pagar, escanea',
-    body: 'Mostra el QR. Te digo si conviene Mercado Pago, Naranja X, banco o tarjeta. Vos confirmas siempre.',
+    title: 'Antes de pagar, escaneá',
+    body: 'Mostrá el QR. Te digo si conviene Mercado Pago, Naranja X, banco o tarjeta. Vos confirmás siempre.',
   },
   {
     id: 'how',
-    title: 'Te marco una opcion clara',
-    body: 'Primero ves con que pagar. Si queres, despues miras topes y otras opciones.',
+    title: 'Te marco una opción clara',
+    body: 'Primero ves con qué pagar. Si querés, después mirás topes y otras opciones.',
   },
   {
     id: 'permissions',

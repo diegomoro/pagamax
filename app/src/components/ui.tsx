@@ -26,6 +26,13 @@ import { colors, radius, shadows, spacing, timing, typography } from '@/lib/them
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
+const ICON_ACCESSIBILITY_LABELS: Partial<Record<IoniconName, string>> = {
+  'arrow-back': 'Volver',
+  'ellipsis-horizontal': 'Abrir acciones',
+  'options-outline': 'Abrir ajustes',
+  'time-outline': 'Ver historial',
+};
+
 function triggerHaptic(effect: Promise<void>): void {
   void effect.catch(() => {
     // Haptics are optional; control actions must never wait on them.
@@ -107,7 +114,12 @@ export function Chip({
   };
 
   return (
-    <Pressable onPress={handlePress} style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.chipPressed]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={handlePress}
+      style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.chipPressed]}
+    >
       <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>{label}</Text>
     </Pressable>
   );
@@ -155,6 +167,7 @@ function BaseButton({
   return (
     <Pressable
       {...props}
+      accessibilityRole={props.accessibilityRole ?? 'button'}
       onPress={handlePress}
       style={({ pressed }) => [
         styles.button,
@@ -188,11 +201,13 @@ export function IconButton({
   onPress,
   tone = 'surface',
   size = 22,
+  accessibilityLabel,
 }: {
   icon: IoniconName;
   onPress?: () => void;
   tone?: 'surface' | 'ghost' | 'light';
   size?: number;
+  accessibilityLabel?: string;
 }) {
   const handlePress = () => {
     triggerHaptic(Haptics.selectionAsync());
@@ -200,7 +215,12 @@ export function IconButton({
   };
 
   return (
-    <Pressable onPress={handlePress} style={({ pressed }) => [styles.iconButton, tone === 'ghost' && styles.iconButtonGhost, tone === 'light' && styles.iconButtonLight, pressed && styles.iconButtonPressed]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? ICON_ACCESSIBILITY_LABELS[icon] ?? 'Abrir'}
+      onPress={handlePress}
+      style={({ pressed }) => [styles.iconButton, tone === 'ghost' && styles.iconButtonGhost, tone === 'light' && styles.iconButtonLight, pressed && styles.iconButtonPressed]}
+    >
       <Ionicons
         name={icon}
         size={size}
@@ -219,7 +239,12 @@ export function FloatingActionButton({ onPress }: { onPress?: () => void }) {
   };
 
   return (
-    <Pressable onPress={handlePress} style={({ pressed }) => [styles.fab, { bottom: insets.bottom + 18 }, pressed && styles.buttonPressed]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Escanear QR"
+      onPress={handlePress}
+      style={({ pressed }) => [styles.fab, { bottom: insets.bottom + 18 }, pressed && styles.buttonPressed]}
+    >
       <Ionicons name="qr-code-outline" size={28} color={colors.whiteSoft} />
     </Pressable>
   );
@@ -277,7 +302,7 @@ export function SkeletonBlock({
 
   return (
     <View style={[styles.skeletonBase, { width, height, borderRadius: radiusValue }]}>
-      <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateX }] }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX }] }]}>
         <LinearGradient
           colors={['transparent', 'rgba(255,255,255,0.55)', 'transparent']}
           start={{ x: 0, y: 0.5 }}
@@ -709,7 +734,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   sheetBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay,
   },
   sheetWrap: {

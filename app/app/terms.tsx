@@ -9,7 +9,7 @@ export default function TermsScreen() {
     <ScreenScroll contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
         <IconButton icon="arrow-back" onPress={() => router.back()} />
-        <Text style={styles.title}>Terminos</Text>
+        <Text style={styles.title}>Términos</Text>
         <View style={styles.placeholder} />
       </View>
       <Card style={styles.card}>
@@ -18,11 +18,11 @@ export default function TermsScreen() {
       </Card>
       <Card style={styles.card}>
         <Text style={styles.heading}>Estimaciones</Text>
-        <Text style={styles.body}>Los descuentos dependen de terminos de bancos, billeteras, comercios, topes, fechas y validacion final dentro de cada app de pago.</Text>
+        <Text style={styles.body}>Los descuentos dependen de términos de bancos, billeteras, comercios, topes, fechas y validación final dentro de cada app de pago.</Text>
       </Card>
       <Card style={styles.card}>
         <Text style={styles.heading}>Ofertas pagas</Text>
-        <Text style={styles.body}>Si un comercio o emisor paga por aparecer, se marca de forma separada. La recomendacion principal debe priorizar utilidad para el usuario.</Text>
+        <Text style={styles.body}>Si un comercio o emisor paga por aparecer, se marca de forma separada. La recomendación principal debe priorizar utilidad para el usuario.</Text>
       </Card>
       <SecondaryButton onPress={() => void Linking.openURL(LEGAL_LINKS.terms)}>Abrir términos públicos</SecondaryButton>
     </ScreenScroll>

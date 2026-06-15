@@ -4,5 +4,7 @@ export const STORAGE_KEYS = {
   activity: 'pagamax.activity.v1',
   diagnostics: 'pagamax.diagnostics.v1',
   account: 'pagamax.account.v1',
+  backendSession: 'pagamax.backendSession.v1',
+  fundingDestinations: 'pagamax.fundingDestinations.v1',
   telemetryQueue: 'pagamax.telemetry.queue.v1',
 };

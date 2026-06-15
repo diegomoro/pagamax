@@ -95,9 +95,45 @@ if (Array.isArray(defaultMethods)) {
     if (method?.canReceiveCustomerTransfer !== false) {
       fail(`default method ${label} must ship canReceiveCustomerTransfer=false in public beta`);
     }
+    const checkoutRails = Array.isArray(method?.checkoutRails) ? method.checkoutRails : [];
+    if (checkoutRails.includes('linked_card')) {
+      fail(`default method ${label} ships linked_card checkout; public liquidity mode is money-in-account only`);
+    }
+    if (method?.isDefault === true && (method?.rail === 'card' || method?.cardType === 'credit' || method?.cardType === 'debit' || method?.cardType === 'prepaid')) {
+      fail(`default method ${label} is a card-like funded route; public liquidity mode must default to account money`);
+    }
   }
 } else if (defaultMethods) {
   fail('app/assets/data/default-methods.json must contain an array');
+}
+
+const appConfig = readJson('app/app.json');
+const androidConfig = appConfig?.expo?.android;
+const requestedPermissions = new Set(androidConfig?.permissions ?? []);
+const blockedPermissions = new Set(androidConfig?.blockedPermissions ?? []);
+for (const permission of [
+  'android.permission.SYSTEM_ALERT_WINDOW',
+  'android.permission.READ_EXTERNAL_STORAGE',
+  'android.permission.WRITE_EXTERNAL_STORAGE',
+  'android.permission.RECORD_AUDIO',
+]) {
+  if (!blockedPermissions.has(permission)) {
+    fail(`app/app.json must block sensitive permission ${permission}`);
+  }
+  if (requestedPermissions.has(permission)) {
+    fail(`app/app.json must not request sensitive permission ${permission}`);
+  }
+}
+for (const permission of [
+  'android.permission.ACCESS_FINE_LOCATION',
+  'android.permission.ACCESS_COARSE_LOCATION',
+  'android.permission.READ_CONTACTS',
+  'android.permission.READ_SMS',
+  'android.permission.POST_NOTIFICATIONS',
+]) {
+  if (requestedPermissions.has(permission)) {
+    fail(`app/app.json must not request unrelated sensitive permission ${permission}`);
+  }
 }
 
 const forbiddenPublicSurface = [

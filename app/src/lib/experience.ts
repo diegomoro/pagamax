@@ -1,4 +1,4 @@
-import type { MatchMethod, PaymentRecommendation } from '@pagamax/core';
+import type { LiquidityRouteRecommendation, MatchMethod, PaymentRecommendation } from '@pagamax/core';
 import type {
   ConfidenceInfo,
   OptimizationMode,
@@ -14,7 +14,7 @@ function translateCapPeriod(period: string): string {
   if (period === 'daily') return 'diario';
   if (period === 'weekly') return 'semanal';
   if (period === 'monthly') return 'mensual';
-  if (period === 'per_transaction') return 'por transaccion';
+  if (period === 'per_transaction') return 'por transacción';
   return period;
 }
 
@@ -26,10 +26,10 @@ function translateReason(reason: string): string {
   if (match) return `${match[1]}% de reintegro`;
 
   match = reason.match(/^(\d+)% coupon discount capped at (.+)$/);
-  if (match) return `${match[1]}% de descuento con cupon y tope de ${match[2]}`;
+  if (match) return `${match[1]}% de descuento con cupón y tope de ${match[2]}`;
 
   match = reason.match(/^(\d+)% coupon discount$/);
-  if (match) return `${match[1]}% de descuento con cupon`;
+  if (match) return `${match[1]}% de descuento con cupón`;
 
   match = reason.match(/^(\d+)% discount capped at (.+)$/);
   if (match) return `${match[1]}% de descuento con tope de ${match[2]}`;
@@ -41,7 +41,7 @@ function translateReason(reason: string): string {
   if (match) return `Beneficio fijo de ${match[1]}`;
 
   match = reason.match(/^(\d+) installments estimated as financing value$/);
-  if (match) return `${match[1]} cuotas con valor estimado de financiacion`;
+  if (match) return `${match[1]} cuotas con valor estimado de financiación`;
 
   match = reason.match(/^Estimated savings (.+) on (.+)$/);
   if (match) return `Ahorro estimado de ${match[1]} sobre ${match[2]}`;
@@ -55,15 +55,15 @@ function translateReason(reason: string): string {
 function translateWarning(warning: string): string {
   const capMatch = warning.match(/^Assumes full (.+) cap is still available$/);
   if (capMatch) {
-    return `Puede depender de que todavia tengas tope ${translateCapPeriod(capMatch[1])}`;
+    return `Puede depender de que todavía tengas tope ${translateCapPeriod(capMatch[1])}`;
   }
 
   if (warning === 'Cashback timing is not modeled; gross value only') {
-    return 'El reintegro puede acreditarse despues; mira la app antes de confirmar';
+    return 'El reintegro puede acreditarse después; mirá la app antes de confirmar';
   }
 
   if (warning === 'Coupon application may still be required at checkout') {
-    return 'Puede pedir cupon o activacion antes de pagar';
+    return 'Puede pedir cupón o activación antes de pagar';
   }
 
   if (warning === 'Installment value is an estimate, not a guaranteed cash discount') {
@@ -71,6 +71,18 @@ function translateWarning(warning: string): string {
   }
 
   return warning;
+}
+
+function isLiquidityRoute(recommendation: PaymentRecommendation): recommendation is LiquidityRouteRecommendation {
+  return 'routeTier' in recommendation;
+}
+
+function liquiditySpeedScore(recommendation: PaymentRecommendation): number {
+  if (!isLiquidityRoute(recommendation)) return 0;
+  if (recommendation.routeTier === 'direct_pay') return 30000;
+  if (recommendation.routeTier === 'instant_top_up_then_pay') return 16000 - recommendation.expectedFundingSeconds * 20;
+  if (recommendation.routeTier === 'prepared_route') return -8000;
+  return -30000;
 }
 
 export function estimatePagamaxFeeArs(grossSavingsArs: number): number {
@@ -100,7 +112,7 @@ export function buildConfidence(matchMethod: MatchMethod, warningCount: number):
       label: 'Alta',
       score,
       tone: 'success',
-      note: 'El comercio y la promo encajan con senales concretas del QR o del nombre.',
+      note: 'El comercio y la promo encajan con señales concretas del QR o del nombre.',
     };
   }
 
@@ -156,10 +168,12 @@ export function sortRecommendationsForMode(
     const rightDirect = right.valueType === 'discount' ? 1 : 0;
     const leftPenalty = left.warnings.length * 1000;
     const rightPenalty = right.warnings.length * 1000;
+    const leftSpeed = liquiditySpeedScore(left);
+    const rightSpeed = liquiditySpeedScore(right);
 
     return (
-      rightDirect * 10000 + rightPresentation.netSavingsArs - rightPenalty
-      - (leftDirect * 10000 + leftPresentation.netSavingsArs - leftPenalty)
+      rightSpeed + rightDirect * 10000 + rightPresentation.netSavingsArs - rightPenalty
+      - (leftSpeed + leftDirect * 10000 + leftPresentation.netSavingsArs - leftPenalty)
     );
   });
 }

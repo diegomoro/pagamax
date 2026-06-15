@@ -1,4 +1,13 @@
-import type { MatchResult, PagamaxOwnerRoute, PaymentMethodProfile, PaymentRecommendation } from '@pagamax/core';
+import type {
+  AliasVerificationStatus,
+  IdentityDocumentKind,
+  IdentityVerificationStatus,
+  MatchResult,
+  LiquidityRouteRecommendation,
+  PagamaxOwnerRoute,
+  PaymentMethodProfile,
+  PaymentRecommendation,
+} from '@pagamax/core';
 
 export type RecommendationSource = 'manual' | 'scan' | 'online';
 export type OptimizationMode = 'max_savings' | 'fastest_checkout';
@@ -14,6 +23,10 @@ export interface BetaAccount {
   displayName: string;
   phoneLabel?: string;
   inviteCode?: string;
+  identityDocumentKind?: IdentityDocumentKind;
+  identityDocumentLast4?: string;
+  identityHash?: string;
+  identityVerificationStatus?: IdentityVerificationStatus;
   emailVerified: boolean;
   authProvider: 'email_magic_link';
   deviceBoundAt?: string;
@@ -21,6 +34,53 @@ export interface BetaAccount {
   createdAt: string;
   updatedAt: string;
   syncStatus: 'local_only' | 'pending_backend' | 'synced';
+}
+
+export interface BackendSession {
+  accessToken: string;
+  accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
+  sessionExpiresAt: string;
+}
+
+export type FundingLookupKind = 'alias' | 'cbu' | 'cvu';
+
+export interface ResolvedFundingDestination {
+  lookupId: string;
+  lookupKind: FundingLookupKind;
+  lookupValueMasked: string;
+  provider: string;
+  bankName: string;
+  accountLabel?: string;
+  holderName: string;
+  ownerIdentityKind?: IdentityDocumentKind;
+  ownerIdentityLast4?: string;
+  ownerIdentityHash?: string;
+  ownerIdentityVerificationStatus: IdentityVerificationStatus;
+  alias?: string | null;
+  cbuMasked?: string | null;
+  cvuMasked?: string | null;
+  sameOwner: boolean;
+  expiresAt: string;
+}
+
+export interface StoredFundingDestination {
+  id: string;
+  provider: string;
+  bankName: string;
+  accountLabel?: string;
+  aliasHash: string;
+  cvuHash?: string | null;
+  displayAlias?: string | null;
+  displayAccount?: string | null;
+  ownerIdentityLast4?: string | null;
+  ownerIdentityHash?: string | null;
+  verificationStatus: AliasVerificationStatus;
+  sameOwnerProofStatus: AliasVerificationStatus;
+  checkoutAllowed: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ConfidenceInfo {
@@ -63,6 +123,7 @@ export interface RecommendationSession {
   checkoutUrl?: string;
   match: MatchResult;
   recommendations: PaymentRecommendation[];
+  liquidityRoutes?: LiquidityRouteRecommendation[];
   ownerRoute?: PagamaxOwnerRoute | null;
   createdAt: string;
 }
@@ -104,6 +165,9 @@ export interface PromoDataStatus {
   remoteVersion: string | null;
   generatedAt: string | null;
   manifestUrl: string | null;
+  remoteSha256: string | null;
+  hashVerified: boolean;
+  staleAt: string | null;
   lastCheckedAt: string | null;
   lastError: string | null;
   lastSyncStatus: 'idle' | 'checking' | 'updated' | 'up_to_date' | 'error' | 'unconfigured';

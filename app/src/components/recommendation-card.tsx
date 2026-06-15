@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { PaymentRecommendation } from '@pagamax/core';
+import type { LiquidityRouteRecommendation, PaymentRecommendation } from '@pagamax/core';
 import { ConfidenceBadge } from '@/components/confidence-badge';
 import { ProviderIcon } from '@/components/provider-icon';
 import { RecommendationBreakdown } from '@/components/recommendation-breakdown';
@@ -15,6 +15,28 @@ function valueTypeLabel(valueType: PaymentRecommendation['valueType']): string {
   if (valueType === 'financing_estimate') return 'Cuotas';
   if (valueType === 'fallback') return 'Opcion simple';
   return 'Descuento';
+}
+
+function isLiquidityRoute(recommendation: PaymentRecommendation): recommendation is LiquidityRouteRecommendation {
+  return 'routeTier' in recommendation;
+}
+
+function routeLabel(recommendation: PaymentRecommendation): string {
+  if (!isLiquidityRoute(recommendation)) return valueTypeLabel(recommendation.valueType);
+  if (recommendation.routeTier === 'direct_pay') return 'Saldo listo';
+  if (recommendation.routeTier === 'instant_top_up_then_pay') return 'Mover y pagar';
+  if (recommendation.routeTier === 'prepared_route') return 'Preparar antes';
+  return 'Bloqueada';
+}
+
+function routeDecisionLabel(recommendation: PaymentRecommendation): string {
+  if (!isLiquidityRoute(recommendation)) {
+    return recommendation.valueType === 'fallback' ? 'Anda con esta' : 'Usa esta para pagar';
+  }
+  if (recommendation.routeTier === 'direct_pay') return `Paga con saldo en ${recommendation.targetAccount.label}`;
+  if (recommendation.routeTier === 'instant_top_up_then_pay') return `Mueve saldo de ${recommendation.sourceAccount.label} a ${recommendation.targetAccount.label}`;
+  if (recommendation.routeTier === 'prepared_route') return `Prepara saldo en ${recommendation.targetAccount.label}`;
+  return 'Ruta no disponible';
 }
 
 function useEntrance(delay: number) {
@@ -73,6 +95,7 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
   const counter = useRef(new Animated.Value(0)).current;
   const [displayValue, setDisplayValue] = useState(0);
   const isFallback = recommendation.valueType === 'fallback';
+  const liquidityRoute = isLiquidityRoute(recommendation) ? recommendation : null;
 
   useEffect(() => {
     const listener = counter.addListener(({ value }) => setDisplayValue(value));
@@ -95,20 +118,30 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
             <Text style={styles.heroPromo}>{recommendation.promo.promo_title}</Text>
           </View>
         </View>
-        <Pill label={valueTypeLabel(recommendation.valueType)} tone="accent" />
+        <Pill label={routeLabel(recommendation)} tone="accent" />
       </View>
 
       <View style={styles.decisionRow}>
         <View style={styles.decisionLeft}>
           <Ionicons name={isFallback ? 'shield-checkmark-outline' : 'sparkles-outline'} size={16} color={colors.accentPressed} />
-          <Text style={styles.decisionLabel}>{isFallback ? 'Anda con esta' : 'Usa esta para pagar'}</Text>
+          <Text style={styles.decisionLabel}>{routeDecisionLabel(recommendation)}</Text>
         </View>
         <Pill label={`Confianza ${confidence.label}`} tone={confidence.tone === 'success' ? 'success' : confidence.tone === 'warning' ? 'warning' : 'default'} />
       </View>
 
+      {liquidityRoute && liquidityRoute.routeTier !== 'direct_pay' ? (
+        <View style={styles.routePanel}>
+          <Text style={styles.routeTitle}>Ruta de liquidez</Text>
+          <Text style={styles.routeText}>
+            {formatArs(liquidityRoute.amountToMoveArs)} de {liquidityRoute.sourceAccount.label} a {liquidityRoute.targetAccount.label}
+          </Text>
+          <Text style={styles.routeMeta}>Confirmás la transferencia y el pago dentro de las billeteras.</Text>
+        </View>
+      ) : null}
+
       <View style={styles.heroValueWrap}>
-        <Text style={styles.heroValue}>{isFallback ? 'Paga simple' : formatArs(displayValue)}</Text>
-        <Text style={styles.heroCaption}>{isFallback ? 'No encontre una promo segura. Esta es la opcion mas directa.' : 'Plata estimada que queda para vos'}</Text>
+        <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.68}>{isFallback ? 'Pagá simple' : formatArs(displayValue)}</Text>
+        <Text style={styles.heroCaption}>{isFallback ? 'No encontré una promo segura. Esta es la opción más directa.' : 'Plata estimada que queda para vos'}</Text>
       </View>
 
       {isFallback ? null : (
@@ -134,7 +167,7 @@ export const HeroRecommendationCard = memo(function HeroRecommendationCard({
       <View style={styles.heroActions}>
         <PrimaryButton onPress={onPressPrimary}>{primaryLabel}</PrimaryButton>
         <View style={styles.heroSecondary}>
-          <SecondaryButton onPress={onPressDetails}>Ver el por que</SecondaryButton>
+          <SecondaryButton onPress={onPressDetails}>Ver el porqué</SecondaryButton>
         </View>
       </View>
     </Animated.View>
@@ -167,7 +200,7 @@ export const CompactRecommendationRow = memo(function CompactRecommendationRow({
           <Text numberOfLines={1} style={styles.rowPromo}>{recommendation.promo.promo_title}</Text>
         </View>
         <View style={styles.rowRight}>
-          <Text style={styles.rowValue}>{recommendation.valueType === 'fallback' ? 'Abrir' : formatArs(netSavingsArs)}</Text>
+          <Text style={styles.rowValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{recommendation.valueType === 'fallback' ? 'Abrir' : formatArs(netSavingsArs)}</Text>
           <Text style={styles.rowHint}>{recommendation.valueType === 'fallback' ? 'simple' : 'para vos'}</Text>
         </View>
       </Pressable>
@@ -230,6 +263,7 @@ const styles = StyleSheet.create({
   heroValue: {
     ...typography.displayLg,
     color: colors.teal,
+    flexShrink: 1,
   },
   heroCaption: {
     ...typography.caption,
@@ -296,10 +330,30 @@ const styles = StyleSheet.create({
   rowRight: {
     alignItems: 'flex-end',
     gap: spacing.xxs,
+    maxWidth: 112,
+  },
+  routePanel: {
+    borderRadius: radius.md,
+    backgroundColor: colors.accentSoft,
+    padding: spacing.sm,
+    gap: spacing.xxs,
+  },
+  routeTitle: {
+    ...typography.caption,
+    color: colors.accentPressed,
+  },
+  routeText: {
+    ...typography.headingSm,
+    color: colors.ink,
+  },
+  routeMeta: {
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   rowValue: {
     ...typography.headingSm,
     color: colors.teal,
+    textAlign: 'right',
   },
   rowHint: {
     ...typography.caption,

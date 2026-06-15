@@ -13,16 +13,16 @@ export default function PrivacyScreen() {
         <View style={styles.placeholder} />
       </View>
       <Card style={styles.card}>
-        <Text style={styles.heading}>Que guardamos</Text>
-        <Text style={styles.body}>Cuenta, preferencias de medios de pago, comercios guardados, eventos de uso, diagnosticos tecnicos y senales de recomendacion como comercio, categoria, monto aproximado y app elegida.</Text>
-        <Text style={styles.body}>No guardamos credenciales bancarias, numeros completos de tarjeta, biometria, contactos, SMS, notificaciones ni el QR completo por defecto.</Text>
+        <Text style={styles.heading}>Qué guardamos</Text>
+        <Text style={styles.body}>Cuenta, preferencias de medios de pago, comercios guardados, eventos de uso, diagnósticos técnicos y señales de recomendación como comercio, categoría, monto aproximado y app elegida.</Text>
+        <Text style={styles.body}>No guardamos credenciales bancarias, números completos de tarjeta, biometría, contactos, SMS, notificaciones ni el QR completo por defecto.</Text>
       </Card>
       <Card style={styles.card}>
-        <Text style={styles.heading}>Para que lo usamos</Text>
-        <Text style={styles.body}>Mejorar recomendaciones, detectar errores, evitar abuso, medir ofertas y preparar analitica agregada para comercios o emisores sin vender datos sensibles identificables.</Text>
+        <Text style={styles.heading}>Para qué lo usamos</Text>
+        <Text style={styles.body}>Mejorar recomendaciones, detectar errores, evitar abuso, medir ofertas y preparar analítica agregada para comercios o emisores sin vender datos sensibles identificables.</Text>
       </Card>
       <SecondaryButton onPress={() => router.push('/data-controls')}>Configurar datos</SecondaryButton>
-      <SecondaryButton onPress={() => void Linking.openURL(LEGAL_LINKS.privacyPolicy)}>Abrir politica publica</SecondaryButton>
+      <SecondaryButton onPress={() => void Linking.openURL(LEGAL_LINKS.privacyPolicy)}>Abrir política pública</SecondaryButton>
     </ScreenScroll>
   );
 }

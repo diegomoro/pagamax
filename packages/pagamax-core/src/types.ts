@@ -95,6 +95,27 @@ export interface MatchResult {
 
 export type PaymentRail = 'qr' | 'nfc' | 'card' | 'online';
 export type FundingType = 'credit' | 'debit' | 'prepaid' | 'account_money';
+export type FundingRail =
+  | 'ready_balance'
+  | 'linked_card'
+  | 'debin_pull'
+  | 'verified_prefilled_transfer'
+  | 'wallet_scanner'
+  | 'unsupported';
+export type LiquidityRouteTier = 'direct_pay' | 'instant_top_up_then_pay' | 'prepared_route' | 'blocked';
+export type FundingPairStatus = 'instant' | 'prefill_possible' | 'prepare_before_checkout' | 'blocked';
+export type AliasVerificationStatus = 'unverified' | 'verified' | 'same_owner_verified' | 'rejected';
+export type IdentityVerificationStatus = 'unverified' | 'pending' | 'same_owner_verified' | 'mismatch' | 'rejected';
+export type IdentityDocumentKind = 'dni' | 'cuil';
+
+export interface IdentityDocumentValidationResult {
+  ok: boolean;
+  kind: IdentityDocumentKind;
+  normalizedDni: string | null;
+  normalizedCuil: string | null;
+  displayLast4: string | null;
+  reason?: 'invalid_dni' | 'invalid_cuil';
+}
 
 export interface PaymentMethodProfile {
   id: string;
@@ -116,6 +137,73 @@ export interface PaymentMethodProfile {
   qrTransferLimitRemainingArs?: number | null;
   promoCapRemainingArs?: number | null;
   restrictions?: string[];
+  checkoutRails?: FundingRail[];
+  checkoutFrictionScore?: number;
+  handoffFailureRiskScore?: number;
+  fundingDestinationId?: string | null;
+  manualFundingRequired?: boolean;
+  ownerIdentityHash?: string | null;
+  ownerIdentityLast4?: string | null;
+  identityVerificationStatus?: IdentityVerificationStatus;
+}
+
+export interface FundingDestination {
+  id: string;
+  provider: string;
+  label: string;
+  aliasHash: string;
+  cvuHash?: string | null;
+  verificationStatus: AliasVerificationStatus;
+  sameOwnerProofStatus: AliasVerificationStatus;
+  ownerIdentityHash?: string | null;
+  ownerIdentityLast4?: string | null;
+  identityVerificationStatus?: IdentityVerificationStatus;
+  fundingPriority: number;
+  maxTransactionArs: number | null;
+  dailyLimitRemainingArs: number | null;
+  checkoutAllowed: boolean;
+  updatedAt: string;
+}
+
+export interface LiquidityAccount {
+  id: string;
+  provider: string;
+  label: string;
+  methodId?: string;
+  enabled?: boolean;
+  hasUsableFunds?: boolean;
+  availableBalanceArs?: number | null;
+  aliasHash?: string | null;
+  cvuHash?: string | null;
+  canPayMerchantQr?: boolean;
+  canReceiveInstantTransfer?: boolean;
+  canSendTransferByDeepLink?: boolean;
+  canBeFundedByPull?: boolean;
+  canPayMerchantQrViaWallet?: boolean;
+  ownerIdentityHash?: string | null;
+  ownerIdentityLast4?: string | null;
+  identityVerificationStatus?: IdentityVerificationStatus;
+  checkoutAllowed?: boolean;
+}
+
+export interface FundingPairCapability {
+  id: string;
+  sourceProvider: string;
+  targetProvider: string;
+  rail: FundingRail;
+  status: FundingPairStatus;
+  enabled: boolean;
+  requiresUserConfirmation: boolean;
+  expectedSeconds: number;
+  maxAmountArs: number | null;
+  frictionScoreArs?: number;
+  failureRiskScoreArs?: number;
+  sourceAndroidPackage?: string | null;
+  targetAndroidPackage?: string | null;
+  handoffUrl?: string | null;
+  verifiedAt?: string | null;
+  expiresAt?: string | null;
+  notes?: string[];
 }
 
 export interface PromoCandidate {
@@ -169,4 +257,124 @@ export interface PagamaxRoutingResult {
   ownerRoute: PagamaxOwnerRoute | null;
   ownerRouteCandidates: PagamaxOwnerRoute[];
   customerRecommendations: PaymentRecommendation[];
+}
+
+export interface CheckoutRouteRecommendation extends PaymentRecommendation {
+  executionRail: FundingRail;
+  routeNetValueArs: number;
+  frictionPenaltyArs: number;
+  failureRiskPenaltyArs: number;
+  requiresExternalFundingApproval: boolean;
+}
+
+export interface CheckoutRouteInput extends RecommendationInput {
+  hideSlowRoutes?: boolean;
+  accountIdentityHash?: string | null;
+  requireSameOwnerForFunding?: boolean;
+}
+
+export interface CheckoutRoutePlan {
+  version: 1;
+  routeId: string;
+  nonce: string;
+  qrHash: string;
+  merchantName: string;
+  amountArs: number;
+  provider: string;
+  androidPackage: string;
+  fundingRail: FundingRail;
+  destinationAliasHash?: string | null;
+  accountIdentityHash?: string | null;
+  accountIdentityVerificationStatus?: IdentityVerificationStatus | null;
+  methodOwnerIdentityHash?: string | null;
+  methodOwnerIdentityVerificationStatus?: IdentityVerificationStatus | null;
+  handoffUrl?: string | null;
+  issuedAt: string;
+  expiresAt: string;
+  signature: string;
+}
+
+export interface LiquidityRouteRecommendation extends PaymentRecommendation {
+  routeTier: LiquidityRouteTier;
+  sourceAccount: LiquidityAccount;
+  targetAccount: LiquidityAccount;
+  fundingCapability?: FundingPairCapability | null;
+  fundingRail: FundingRail;
+  fundingStatus: FundingPairStatus;
+  amountToMoveArs: number;
+  routeNetValueArs: number;
+  transferFrictionPenaltyArs: number;
+  transferFailureRiskPenaltyArs: number;
+  expectedFundingSeconds: number;
+  requiresFundingConfirmation: boolean;
+  destinationAliasHash?: string | null;
+  liquidityWarnings: string[];
+  blockedReasons: string[];
+}
+
+export interface LiquidityRouteInput extends RecommendationInput {
+  accounts: LiquidityAccount[];
+  fundingDestinations?: FundingDestination[];
+  pairCapabilities?: FundingPairCapability[];
+  accountIdentityHash?: string | null;
+  now?: string | Date;
+  allowPreparedRoutes?: boolean;
+}
+
+export interface LiquidityRoutePlan {
+  version: 1;
+  routeId: string;
+  nonce: string;
+  qrHash: string;
+  merchantName: string;
+  amountArs: number;
+  sourceProvider: string;
+  sourceAccountId: string;
+  targetProvider: string;
+  targetAccountId: string;
+  targetAliasHash?: string | null;
+  fundingRail: FundingRail;
+  fundingStatus: FundingPairStatus;
+  paymentAndroidPackage: string;
+  fundingAndroidPackage?: string | null;
+  accountIdentityHash?: string | null;
+  issuedAt: string;
+  expiresAt: string;
+  signature: string;
+}
+
+export interface LiquidityRoutePlanValidationContext {
+  expectedQrHash: string;
+  expectedAmountArs: number;
+  expectedMerchantName?: string;
+  expectedSourceProvider?: string;
+  expectedSourceAccountId?: string;
+  expectedTargetProvider?: string;
+  expectedTargetAccountId?: string;
+  expectedTargetAliasHash?: string | null;
+  expectedPaymentAndroidPackage?: string;
+  expectedFundingAndroidPackage?: string | null;
+  expectedAccountIdentityHash?: string | null;
+  allowedAndroidPackages: string[];
+  now?: string | Date;
+}
+
+export interface CheckoutRoutePlanValidationContext {
+  expectedQrHash: string;
+  expectedAmountArs: number;
+  expectedProvider?: string;
+  expectedAndroidPackage?: string;
+  expectedAccountIdentityHash?: string | null;
+  requireSameOwnerForFunding?: boolean;
+  allowedAndroidPackages: string[];
+  allowedHandoffUrls?: string[];
+  now?: string | Date;
+}
+
+export type CheckoutRoutePlanSignatureVerifier = (canonicalPayload: string, signature: string) => boolean | Promise<boolean>;
+
+export interface CheckoutRoutePlanValidationResult {
+  ok: boolean;
+  canonicalPayload: string;
+  errors: string[];
 }

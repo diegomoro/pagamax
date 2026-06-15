@@ -25,7 +25,7 @@ export function ActivityItem({
           <Text style={styles.merchant}>{item.merchantName}</Text>
           <Text style={styles.meta}>{formatDate(item.createdAt)} - {item.category} - {item.methodLabel}</Text>
         </View>
-        <Text style={styles.netValue}>{formatArs(item.netSavingsArs)}</Text>
+        <Text style={styles.netValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{formatArs(item.netSavingsArs)}</Text>
       </View>
       <View style={styles.breakdown}>
         <Text style={styles.breakdownText}>Ahorro bruto {formatArs(item.grossSavingsArs)}</Text>
@@ -68,6 +68,8 @@ const styles = StyleSheet.create({
   netValue: {
     ...typography.headingLg,
     color: colors.teal,
+    flexShrink: 1,
+    textAlign: 'right',
   },
   breakdown: {
     flexDirection: 'row',

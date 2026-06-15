@@ -2,6 +2,8 @@
 
 Last updated: 2026-06-06
 
+Ultimate objective: maximize time-discounted net profit. Public-beta monetization choices should be judged by expected net revenue over time after acquisition, operations, data, support, fraud, compliance, and trust-damage costs. Faster revenue only wins when it does not destroy larger future profit.
+
 The public beta should monetize trust and checkout intent, not consumer distraction.
 
 ## V1 Positioning
@@ -10,6 +12,7 @@ The public beta should monetize trust and checkout intent, not consumer distract
 - No consumer ads in v1.
 - Sponsored offers are allowed only when clearly labeled and never allowed to override a clearly better user outcome.
 - B2B products are merchant and issuer/wallet insights.
+- User savings, neutral ranking, and checkout speed are monetization infrastructure: they create repeated high-intent moments that merchants and issuers can pay for.
 
 ## Data Products
 
@@ -54,6 +57,22 @@ Issuer/wallet products:
 ## Ranking Policy
 
 Primary ranking must optimize expected user outcome. Sponsored offers may appear in clearly labeled placements or as secondary options, but they must not hide or outrank a clearly better organic recommendation.
+
+The business reason is not charity; it is discounted profit. If paid inventory makes users doubt the recommendation, scan less, block WhatsApp, churn, or create support/legal risk, the short-term sponsor revenue should be counted as negative expected value.
+
+## Profit Metrics
+
+Track monetization with discounted net-profit inputs, not vanity metrics:
+
+- Repeat checkout checks per active user
+- Trusted handoff rate and return-from-wallet rate
+- Merchant/issuer revenue by category and amount band
+- Sponsored-offer revenue net of churn, support, and trust impact
+- Data freshness cost versus recommendation lift
+- CAC by channel and captain/creator cohort
+- LTV/CAC by city, category, and persona
+- Time-to-revenue for each build, partnership, and growth tactic
+- Fraud, compliance, chargeback, support, and moderation cost per active user
 
 ## Deferred Monetization
 

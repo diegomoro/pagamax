@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { recommendPagamaxRoutes, type PaymentMethodProfile, type PromoCandidate, type PromoSummary } from '../src/index.js';
+import { type PaymentMethodProfile, type PromoCandidate, type PromoSummary } from '../src/index.js';
+import { recommendPagamaxRoutes } from '../src/owner-routing.js';
 
 function makePromo(overrides: Partial<PromoSummary> = {}): PromoSummary {
   return {

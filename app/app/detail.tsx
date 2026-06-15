@@ -11,6 +11,7 @@ import { usePagamax } from '@/context/pagamax-context';
 import { buildPaymentHandoffPlan, openPaymentApp } from '@/lib/handoff';
 import { buildRecommendationPresentation, sortRecommendationsForMode } from '@/lib/experience';
 import { colors, radius, shadows, spacing, typography } from '@/lib/theme';
+import type { LiquidityRouteRecommendation, PaymentRecommendation } from '@pagamax/core';
 
 const DAY_LABELS: Record<string, string> = {
   everyday: 'todos los dias',
@@ -58,6 +59,10 @@ function formatHandoffConfidence(label: ReturnType<typeof buildPaymentHandoffPla
   return 'Revisalo en la app';
 }
 
+function isLiquidityRoute(recommendation: PaymentRecommendation): recommendation is LiquidityRouteRecommendation {
+  return 'routeTier' in recommendation;
+}
+
 export default function DetailScreen() {
   const { currentSession, recordHandoff, settings } = usePagamax();
   const params = useLocalSearchParams<{ index?: string }>();
@@ -82,24 +87,25 @@ export default function DetailScreen() {
   if (!currentSession || !recommendation) {
     return (
       <View style={styles.emptyWrap}>
-        <EmptyState title="No hay detalle cargado" body="Volver a resultados y elegir otra opcion." />
+        <EmptyState title="No hay detalle cargado" body="Volvé a resultados y elegí otra opción." />
       </View>
     );
   }
 
   const presentation = buildRecommendationPresentation(currentSession, recommendation);
   const handoffPlan = buildPaymentHandoffPlan(currentSession, recommendation);
+  const liquidityRoute = isLiquidityRoute(recommendation) ? recommendation : null;
   const handleOpen = async () => {
     try {
-      const mode = await openPaymentApp(recommendation.method.provider, {
+      const mode = await openPaymentApp(handoffPlan.provider, {
         merchantName: currentSession.match.merchant_name,
         amountArs: currentSession.amountEstimated ? undefined : currentSession.amountArs,
         qrPayload: currentSession.qrPayload,
       });
-      recordHandoff(recommendation.method.provider, mode, handoffPlan.detail);
+      recordHandoff(handoffPlan.provider, mode, handoffPlan.detail);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo abrir la app seleccionada.';
-      recordHandoff(recommendation.method.provider, 'error', message);
+      recordHandoff(handoffPlan.provider, 'error', message);
     }
   };
 
@@ -133,14 +139,31 @@ export default function DetailScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.value}>{recommendation.valueType === 'fallback' ? 'Paga simple' : presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
-          <Text style={styles.caption}>{recommendation.valueType === 'fallback' ? 'No encontre promo segura. Esta es la opcion directa.' : 'Plata estimada que queda para vos'}</Text>
-          <Text style={styles.net}>Usa: {recommendation.method.label}</Text>
+          <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.68}>{recommendation.valueType === 'fallback' ? 'Pagá simple' : presentation.netSavingsArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}</Text>
+          <Text style={styles.caption}>{recommendation.valueType === 'fallback' ? 'No encontré promo segura. Esta es la opción directa.' : 'Plata estimada que queda para vos'}</Text>
+          <Text style={styles.net}>
+            {liquidityRoute && liquidityRoute.routeTier !== 'direct_pay'
+              ? `Ruta: ${liquidityRoute.sourceAccount.label} a ${liquidityRoute.targetAccount.label}`
+              : `Usa: ${recommendation.method.label}`}
+          </Text>
           <View style={styles.pills}>
             <Pill label={recommendation.valueType === 'cashback' ? 'Reintegro' : recommendation.valueType === 'financing_estimate' ? 'Cuotas' : recommendation.valueType === 'fallback' ? 'Opcion simple' : 'Descuento'} tone="accent" />
             <Pill label={recommendation.source === 'merchant' ? 'Regla del comercio' : recommendation.source === 'fallback' ? 'Sin promo confirmada' : 'Regla general'} />
+            {liquidityRoute ? (
+              <Pill label={liquidityRoute.routeTier === 'direct_pay' ? 'Saldo listo' : liquidityRoute.routeTier === 'instant_top_up_then_pay' ? 'Mover y pagar' : 'Preparar antes'} />
+            ) : null}
           </View>
         </View>
+
+        {liquidityRoute && liquidityRoute.routeTier !== 'direct_pay' ? (
+          <View style={styles.routeCard}>
+            <Text style={styles.routeTitle}>Ruta de liquidez</Text>
+            <Text style={styles.routeText}>
+              Mover {liquidityRoute.amountToMoveArs.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })} de {liquidityRoute.sourceAccount.label} a {liquidityRoute.targetAccount.label}.
+            </Text>
+            <Text style={styles.routeMeta}>Paga Menos abre apps permitidas; la transferencia y el pago se confirman dentro de cada billetera.</Text>
+          </View>
+        ) : null}
 
         {recommendation.valueType === 'fallback' ? null : (
           <RecommendationBreakdown
@@ -151,12 +174,12 @@ export default function DetailScreen() {
           />
         )}
         <Text style={styles.orderNote}>
-          Orden actual: {settings.optimizationMode === 'max_savings' ? 'mas plata para vos' : 'menos vueltas'}
+          Orden actual: {settings.optimizationMode === 'max_savings' ? 'más plata para vos' : 'menos vueltas'}
         </Text>
 
         <View style={styles.integrityCard}>
           <Ionicons name="shield-checkmark-outline" size={18} color={colors.accentPressed} />
-          <Text style={styles.integrityText}>Esta opcion se ordena por lo que mas sirve en este pago. Los comercios pagos aparecen marcados y no se mezclan aca.</Text>
+          <Text style={styles.integrityText}>Esta opción se ordena por lo que más sirve en este pago. Los comercios pagos aparecen marcados y no se mezclan acá.</Text>
         </View>
 
         <View style={styles.handoffCard}>
@@ -175,7 +198,7 @@ export default function DetailScreen() {
             { icon: 'qr-code-outline', label: 'QR', value: currentSession.match.qr.payment_provider ?? currentSession.match.qr.qr_type },
             { icon: 'card-outline', label: 'Emisor', value: recommendation.promo.issuer },
             { icon: 'cash-outline', label: 'Tope', value: recommendation.promo.cap_amount_ars ? recommendation.promo.cap_amount_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin tope' },
-            { icon: 'pricetag-outline', label: 'Minimo', value: recommendation.promo.min_purchase_ars ? recommendation.promo.min_purchase_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin minimo' },
+            { icon: 'pricetag-outline', label: 'Mínimo', value: recommendation.promo.min_purchase_ars ? recommendation.promo.min_purchase_ars.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin mínimo' },
           ]}
         />
 
@@ -219,7 +242,7 @@ export default function DetailScreen() {
         </View>
 
         <SecondaryButton onPress={() => router.push({ pathname: '/success', params: { index: params.index ?? '0' } })}>
-          Guardar esta decision
+          Guardar esta decisión
         </SecondaryButton>
       </Animated.ScrollView>
     </View>
@@ -295,6 +318,7 @@ const styles = StyleSheet.create({
   value: {
     ...typography.displayLg,
     color: colors.teal,
+    flexShrink: 1,
   },
   caption: {
     ...typography.caption,
@@ -334,6 +358,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
     gap: spacing.xs,
+  },
+  routeCard: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  routeTitle: {
+    ...typography.headingSm,
+    color: colors.accentPressed,
+  },
+  routeText: {
+    ...typography.bodySm,
+    color: colors.ink,
+  },
+  routeMeta: {
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   handoffTitle: {
     ...typography.headingSm,

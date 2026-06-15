@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Card, Chip, IconButton, InlineNotice, Pill, ScreenScroll, SecondaryButton, ToggleRow } from '@/components/ui';
 import { SectionHeader } from '@/components/section-header';
+import { FUNDING_DESTINATIONS_ENABLED } from '@/config/public-build';
 import { usePagamax } from '@/context/pagamax-context';
 import { describePromoDataSource, describePromoSyncStatus, formatPromoDataDate, isPromoDataStale } from '@/lib/promo-data';
 import { colors, radius, spacing, typography } from '@/lib/theme';
@@ -31,6 +32,9 @@ export default function ProfileScreen() {
   const staleData = isPromoDataStale(promoDataStatus.generatedAt);
   const visibleDiagnostics = diagnostics.slice(0, 8);
   const manifestUrl = promoDataStatus.manifestUrl;
+  const remoteHashLabel = promoDataStatus.remoteSha256
+    ? `${promoDataStatus.remoteSha256.slice(0, 12)}... ${promoDataStatus.hashVerified ? 'verificado' : 'sin verificar'}`
+    : 'sin hash';
 
   return (
     <ScreenScroll contentContainerStyle={styles.content}>
@@ -47,13 +51,13 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.trustCopy}>
             <Text style={styles.trustTitle}>Reglas de confianza</Text>
-            <Text style={styles.trustBody}>Primero va lo que mas te sirve. Si un comercio paga por aparecer, se marca claro.</Text>
+            <Text style={styles.trustBody}>Primero va lo que más te sirve. Si un comercio paga por aparecer, se marca claro.</Text>
           </View>
         </View>
         <View style={styles.trustGrid}>
           <View style={styles.trustPill}>
-            <Text style={styles.trustPillValue}>Fee visible</Text>
-            <Text style={styles.trustPillLabel}>sin letra chica</Text>
+            <Text style={styles.trustPillValue}>Ahorro estimado</Text>
+            <Text style={styles.trustPillLabel}>sin promesas falsas</Text>
           </View>
           <View style={styles.trustPill}>
             <Text style={styles.trustPillValue}>QR primero</Text>
@@ -80,7 +84,12 @@ export default function ProfileScreen() {
               </View>
               <Pill label={account.syncStatus === 'synced' ? 'sync' : 'local'} tone={account.syncStatus === 'synced' ? 'success' : 'warning'} />
             </View>
-            {account.phoneLabel ? <Text style={styles.help}>Telefono: {account.phoneLabel}</Text> : null}
+            {account.phoneLabel ? <Text style={styles.help}>Teléfono: {account.phoneLabel}</Text> : null}
+            {FUNDING_DESTINATIONS_ENABLED && account.identityDocumentLast4 ? (
+              <Text style={styles.help}>
+                Identidad: termina en {account.identityDocumentLast4} - {account.identityVerificationStatus === 'same_owner_verified' ? 'verificada' : 'pendiente'}
+              </Text>
+            ) : null}
             <View style={styles.buttonRow}>
               <SecondaryButton stretch={false} onPress={() => router.push('/account')}>Editar</SecondaryButton>
               <SecondaryButton stretch={false} onPress={() => void signOutAccount()}>Cerrar local</SecondaryButton>
@@ -90,7 +99,7 @@ export default function ProfileScreen() {
           <>
             <InlineNotice
               title="Sin cuenta beta"
-              body="Crea una cuenta local para asociar este telefono y preparar la sincronizacion."
+              body="Creá una cuenta local para asociar este teléfono y preparar la sincronización."
               tone="warning"
             />
             <SecondaryButton onPress={() => router.push('/account')}>Crear cuenta</SecondaryButton>
@@ -102,32 +111,32 @@ export default function ProfileScreen() {
       <Card style={styles.card}>
         <View style={styles.buttonRow}>
           <SecondaryButton stretch={false} onPress={() => router.push('/privacy')}>Privacidad</SecondaryButton>
-          <SecondaryButton stretch={false} onPress={() => router.push('/terms')}>Terminos</SecondaryButton>
+          <SecondaryButton stretch={false} onPress={() => router.push('/terms')}>Términos</SecondaryButton>
           <SecondaryButton stretch={false} onPress={() => router.push('/data-controls')}>Datos</SecondaryButton>
           <SecondaryButton stretch={false} onPress={() => router.push('/support')}>Soporte</SecondaryButton>
         </View>
         <SecondaryButton onPress={() => router.push('/delete-account')}>Eliminar cuenta y datos</SecondaryButton>
       </Card>
 
-      <SectionHeader title="Como elegir" subtitle="Decidi si queres mas ahorro o menos vueltas." />
+      <SectionHeader title="Cómo elegir" subtitle="Decidí si querés más ahorro o menos vueltas." />
       <Card style={styles.card}>
         <View style={styles.chips}>
-          <Chip label="Maximo ahorro" selected={settings.optimizationMode === 'max_savings'} onPress={() => updateSettings({ optimizationMode: 'max_savings' })} />
-          <Chip label="Pago mas rapido" selected={settings.optimizationMode === 'fastest_checkout'} onPress={() => updateSettings({ optimizationMode: 'fastest_checkout' })} />
+          <Chip label="Máximo ahorro" selected={settings.optimizationMode === 'max_savings'} onPress={() => updateSettings({ optimizationMode: 'max_savings' })} />
+          <Chip label="Pago más rápido" selected={settings.optimizationMode === 'fastest_checkout'} onPress={() => updateSettings({ optimizationMode: 'fastest_checkout' })} />
         </View>
-        <Text style={styles.help}>Modo actual: {settings.optimizationMode === 'max_savings' ? 'busca mas plata para vos' : 'busca pagar con menos pasos'}.</Text>
+        <Text style={styles.help}>Modo actual: {settings.optimizationMode === 'max_savings' ? 'busca más plata para vos' : 'busca pagar con menos pasos'}.</Text>
       </Card>
 
-      <SectionHeader title="Alertas" subtitle="Solo avisos utiles y con umbral visible." />
+      <SectionHeader title="Alertas" subtitle="Solo avisos útiles y con umbral visible." />
       <Card style={styles.card}>
         <ToggleRow
           title="Notificaciones"
-          body="Avisos cuando la plata estimada supere tu minimo."
+          body="Avisos cuando la plata estimada supere tu mínimo."
           value={settings.notificationsEnabled}
           onValueChange={(value) => updateSettings({ notificationsEnabled: value })}
         />
         <View style={styles.thresholdRow}>
-          <Text style={styles.thresholdLabel}>Umbral minimo</Text>
+          <Text style={styles.thresholdLabel}>Umbral mínimo</Text>
           <View style={styles.chips}>
             {[1500, 2500, 4000].map((value) => (
               <Chip
@@ -141,7 +150,7 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
-      <SectionHeader title="Donde mirar" subtitle="Elegi en que compras queres ayuda." />
+      <SectionHeader title="Dónde mirar" subtitle="Elegí en qué compras querés ayuda." />
       <Card style={styles.card}>
         <ToggleRow
           title="En tienda"
@@ -178,17 +187,25 @@ export default function ProfileScreen() {
           <Text style={styles.statusValue}>{formatPromoDataDate(promoDataStatus.generatedAt)}</Text>
         </View>
         <View style={styles.statusRow}>
-          <Text style={styles.help}>Ultimo check</Text>
+          <Text style={styles.help}>Último check</Text>
           <Text style={styles.statusValue}>{formatPromoDataDate(promoDataStatus.lastCheckedAt, 'nunca')}</Text>
         </View>
         <View style={styles.statusRow}>
-          <Text style={styles.help}>Version local</Text>
-          <Text style={styles.statusValue}>{promoDataStatus.localVersion ?? 'sin version'}</Text>
+          <Text style={styles.help}>Versión local</Text>
+          <Text style={styles.statusValue}>{promoDataStatus.localVersion ?? 'sin versión'}</Text>
+        </View>
+        <View style={styles.statusRow}>
+          <Text style={styles.help}>Hash remoto</Text>
+          <Text style={styles.statusValue}>{remoteHashLabel}</Text>
+        </View>
+        <View style={styles.statusRow}>
+          <Text style={styles.help}>Fresco hasta</Text>
+          <Text style={styles.statusValue}>{formatPromoDataDate(promoDataStatus.staleAt, 'sin fecha')}</Text>
         </View>
         {staleData ? (
           <InlineNotice
             title="Base posiblemente vieja"
-            body="Si hoy vas a probar en tiendas, revisa el remoto antes de salir o puede que evalues promos vencidas."
+            body="Si hoy vas a probar en tiendas, revisá el remoto antes de salir o puede que evalúes promos vencidas."
             tone="warning"
           />
         ) : null}
@@ -205,18 +222,18 @@ export default function ProfileScreen() {
         ) : null}
       </Card>
 
-      <SectionHeader title="Transparencia" subtitle="Tenes que entenderlo antes de abrir la app de pago." />
+      <SectionHeader title="Transparencia" subtitle="Tenés que entenderlo antes de abrir la app de pago." />
       <Card style={styles.card}>
-        <Text style={styles.help}>Paga Menos muestra ahorro bruto, fee y plata final para vos.</Text>
-        <Text style={styles.help}>Si depende del dia, tope o condicion rara, te lo marcamos antes.</Text>
+        <Text style={styles.help}>Paga Menos muestra ahorro estimado y condiciones relevantes antes de abrir la app de pago.</Text>
+        <Text style={styles.help}>Si depende del día, tope o condición rara, te lo marcamos antes.</Text>
         <Text style={styles.help}>La idea es ayudarte a elegir, no empujarte a pagar algo que no entendiste.</Text>
       </Card>
 
-      <SectionHeader title="Modo avanzado" subtitle="Controles extra para probar calculo y apertura de apps." />
+      <SectionHeader title="Modo avanzado" subtitle="Controles extra para probar cálculo y apertura de apps." />
       <Card style={styles.card}>
         <ToggleRow
           title="Debug visible"
-          body="Muestra detalles extra en resultados y habilita evidencia tecnica."
+          body="Muestra detalles extra en resultados y habilita evidencia técnica."
           value={settings.debugEnabled}
           onValueChange={(value) => updateSettings({ debugEnabled: value })}
         />
@@ -226,7 +243,7 @@ export default function ProfileScreen() {
           value={settings.advancedMode}
           onValueChange={(value) => updateSettings({ advancedMode: value })}
         />
-        <Text style={styles.help}>Paga Menos muestra fee, ahorro estimado y condiciones. No oculta el costo de usar la app.</Text>
+        <Text style={styles.help}>Paga Menos muestra ahorro estimado y condiciones. No confirma pagos reales.</Text>
       </Card>
 
       <SectionHeader title="Eventos recientes" subtitle="Registro corto de actualizaciones, QR, detecciones y aperturas de apps." />
@@ -244,12 +261,12 @@ export default function ProfileScreen() {
             {event.detail ? <Text style={styles.eventDetail}>{event.detail}</Text> : null}
           </View>
         )) : (
-          <Text style={styles.help}>Todavia no hay eventos guardados. Escanea un QR o revisa descuentos para generar evidencia.</Text>
+          <Text style={styles.help}>Todavía no hay eventos guardados. Escaneá un QR o revisá descuentos para generar evidencia.</Text>
         )}
         <SecondaryButton onPress={() => void clearDiagnostics()}>Limpiar eventos</SecondaryButton>
       </Card>
 
-      <SectionHeader title="Comercios guardados" subtitle="Accesos rapidos para reuso frecuente." />
+      <SectionHeader title="Comercios guardados" subtitle="Accesos rápidos para reuso frecuente." />
       <Card style={styles.card}>
         <View style={styles.chips}>
           {settings.savedMerchants.length > 0 ? settings.savedMerchants.map((merchant) => (
@@ -259,7 +276,7 @@ export default function ProfileScreen() {
               selected
               onPress={() => updateSettings({ savedMerchants: settings.savedMerchants.filter((item) => item !== merchant) })}
             />
-          )) : <Text style={styles.help}>Todavia no guardaste comercios para reuso rapido.</Text>}
+          )) : <Text style={styles.help}>Todavía no guardaste comercios para reuso rápido.</Text>}
         </View>
       </Card>
     </ScreenScroll>

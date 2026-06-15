@@ -39,6 +39,7 @@ export default function TabsLayout() {
           }}
           options={{
             title: 'Inicio',
+            tabBarAccessibilityLabel: 'Inicio',
             tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={size} />,
           }}
         />
@@ -51,6 +52,7 @@ export default function TabsLayout() {
           }}
           options={{
             title: 'Mis medios',
+            tabBarAccessibilityLabel: 'Mis medios',
             tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'wallet' : 'wallet-outline'} color={color} size={size} />,
           }}
         />

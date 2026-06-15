@@ -62,19 +62,19 @@ export default function ResultsScreen() {
     if (!hero || !handoffPlan) return;
 
     try {
-      const mode = await openPaymentApp(hero.method.provider, {
+      const mode = await openPaymentApp(handoffPlan.provider, {
         merchantName: currentSession.match.merchant_name,
         amountArs: currentSession.amountEstimated ? undefined : currentSession.amountArs,
         qrPayload: currentSession.qrPayload,
       });
-      recordHandoff(hero.method.provider, mode, handoffPlan.detail);
+      recordHandoff(handoffPlan.provider, mode, handoffPlan.detail);
       setHandoffStarted(true);
       if (mode === 'store') {
         Alert.alert('Se abrió Google Play', `No se pudo abrir ${handoffPlan.label} en este teléfono.`);
       }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo abrir la app seleccionada.';
-      recordHandoff(hero.method.provider, 'error', message);
+      recordHandoff(handoffPlan.provider, 'error', message);
       Alert.alert('No se pudo abrir la app', message);
     }
   };
@@ -124,7 +124,7 @@ export default function ResultsScreen() {
                 onPressPrimary={() => void handleOpen()}
               />
             ) : (
-              <EmptyState title="No encontre una opcion clara" body="Proba otro monto, activa mas medios o corrige el comercio." />
+              <EmptyState title="No encontré una opción clara" body="Probá otro monto, activá más medios o corregí el comercio." />
             )}
 
             {handoffPlan ? (
@@ -144,7 +144,7 @@ export default function ResultsScreen() {
                   style={styles.returnButton}
                   onPress={() => router.push({ pathname: '/success', params: { index: '0' } })}
                 >
-                  <Text style={styles.returnButtonText}>Guardar decision</Text>
+                  <Text style={styles.returnButtonText}>Guardar decisión</Text>
                 </Pressable>
               </View>
             ) : null}
@@ -187,7 +187,7 @@ export default function ResultsScreen() {
               <Text style={styles.footerLink}>Escanear otro QR</Text>
             </Pressable>
             <Pressable onPress={() => router.push({ pathname: '/success', params: { index: '0' } })}>
-              <Text style={styles.footerLink}>Guardar decision</Text>
+              <Text style={styles.footerLink}>Guardar decisión</Text>
             </Pressable>
           </View>
         }

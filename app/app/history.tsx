@@ -27,7 +27,8 @@ export default function HistoryScreen() {
     }
     return [...totals.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? 'Compras';
   }, [source]);
-  const progress = Math.min(1, summary.monthlyNetSavingsArs / 25000);
+  const progress = Math.max(0, Math.min(1, summary.monthlyNetSavingsArs / 25000));
+  const progressPercent = Math.round(progress * 100);
   const streakCount = Math.min(7, Math.max(1, source.length));
 
   const items = useMemo(() => {
@@ -60,11 +61,11 @@ export default function HistoryScreen() {
 
             <View style={styles.progressCard}>
               <View style={styles.progressCopy}>
-                <Text style={styles.progressTitle}>Como viene el mes</Text>
-                <Text style={styles.progressBody}>{source.length} pagos mirados. Donde mas rindio: {bestCategory}.</Text>
+                <Text style={styles.progressTitle}>Cómo viene el mes</Text>
+                <Text style={styles.progressBody}>{source.length} pagos mirados. Donde más rindió: {bestCategory}.</Text>
               </View>
               <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+                {progressPercent > 0 ? <View style={[styles.progressFill, { width: `${progressPercent}%` }]} /> : null}
               </View>
               <Text style={styles.progressHint}>Meta sana: ahorrar en compras que ya ibas a hacer.</Text>
             </View>
@@ -72,17 +73,17 @@ export default function HistoryScreen() {
             <View style={styles.milestoneRow}>
               <View style={styles.milestone}>
                 <Ionicons name="flame-outline" size={18} color={colors.warning} />
-                <Text style={styles.milestoneValue}>{streakCount} dias</Text>
-                <Text style={styles.milestoneLabel}>dias mirando antes de pagar</Text>
+                <Text style={styles.milestoneValue}>{streakCount} días</Text>
+                <Text style={styles.milestoneLabel}>días mirando antes de pagar</Text>
               </View>
               <View style={styles.milestone}>
                 <Ionicons name="ribbon-outline" size={18} color={colors.accentPressed} />
                 <Text style={styles.milestoneValue}>{bestCategory}</Text>
-                <Text style={styles.milestoneLabel}>donde mas te convenia mirar</Text>
+                <Text style={styles.milestoneLabel}>donde más te convenía mirar</Text>
               </View>
             </View>
 
-            <SectionHeader title="Actividad" subtitle="Mira donde te quedo mas plata." />
+            <SectionHeader title="Actividad" subtitle="Mirá dónde te quedó más plata." />
             <View style={styles.filters}>
               <Chip label="Todo" selected={filter === 'all'} onPress={() => setFilter('all')} />
               <Chip label="Este mes" selected={filter === 'month'} onPress={() => setFilter('month')} />
@@ -178,6 +179,7 @@ const styles = StyleSheet.create({
   milestoneValue: {
     ...typography.headingSm,
     color: colors.ink,
+    flexShrink: 1,
   },
   milestoneLabel: {
     ...typography.caption,
