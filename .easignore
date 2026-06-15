@@ -1,6 +1,8 @@
 # EAS may resolve the npm workspace root when archiving.
 tmp/
+.tmp/
 scraper/output*/
+reports/
 scraper/tmp/
 scraper/.cache/
 app/web-dist/

@@ -8,7 +8,9 @@ dist/
 build/
 site/
 tmp/
+.tmp/
 output/
+reports/
 app/web-dist/
 app/dist-android-test/
 app/.expo/
