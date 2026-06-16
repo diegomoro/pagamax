@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -106,6 +106,7 @@ export default function DetailScreen() {
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo abrir la app seleccionada.';
       recordHandoff(handoffPlan.provider, 'error', message);
+      Alert.alert('No pude abrir la app', message);
     }
   };
 

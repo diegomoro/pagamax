@@ -1,4 +1,5 @@
-import { Linking } from 'react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
+import { Linking, Platform } from 'react-native';
 import type { LiquidityRouteRecommendation, PaymentRecommendation } from '@pagamax/core';
 import { getPaymentAppConfig, isAllowedAndroidPackage, isAllowedPaymentAppUrl } from '@/config/payment-apps';
 import type { RecommendationSession } from '@/types/app';
@@ -24,6 +25,11 @@ export interface PaymentHandoffPlan {
   returnInstruction: string;
 }
 
+interface AndroidPackageLaunchResult {
+  opened: boolean;
+  packageMissing: boolean;
+}
+
 function formatArs(value: number | undefined): string {
   if (!Number.isFinite(value)) return 'monto no detectado';
   return value!.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
@@ -31,6 +37,22 @@ function formatArs(value: number | undefined): string {
 
 function isLiquidityRoute(recommendation: PaymentRecommendation): recommendation is LiquidityRouteRecommendation {
   return 'routeTier' in recommendation;
+}
+
+function isPackageMissingError(caught: unknown, androidPackage: string): boolean {
+  const message = caught instanceof Error ? caught.message : String(caught);
+  return message.toLowerCase().includes(`package not found: ${androidPackage}`.toLowerCase());
+}
+
+function openInstalledAndroidApp(androidPackage: string): AndroidPackageLaunchResult {
+  if (Platform.OS !== 'android') return { opened: false, packageMissing: false };
+
+  try {
+    IntentLauncher.openApplication(androidPackage);
+    return { opened: true, packageMissing: false };
+  } catch (caught) {
+    return { opened: false, packageMissing: isPackageMissingError(caught, androidPackage) };
+  }
 }
 
 export function buildPaymentHandoffPlan(
@@ -127,11 +149,13 @@ export async function openPaymentApp(
   }
 
   if (config.androidPackage && isAllowedAndroidPackage(config.provider, config.androidPackage)) {
-    try {
-      await Linking.openURL(`intent://#Intent;package=${config.androidPackage};end`);
+    const packageLaunch = openInstalledAndroidApp(config.androidPackage);
+    if (packageLaunch.opened) {
       return 'app';
-    } catch {
-      // Fall through to Play Store.
+    }
+
+    if (Platform.OS === 'android' && config.canOpenApp && !packageLaunch.packageMissing) {
+      throw new Error(`No pude abrir ${config.label}. Abrila manualmente y escaneá el QR desde esa app.`);
     }
   }
 
