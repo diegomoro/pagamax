@@ -73,6 +73,22 @@ for (const snippet of ['PROVIDER_ALLOWED_SCHEMES', 'TRUSTED_HTTPS_HOSTS', 'isAll
   }
 }
 
+const handoffLib = readText('app/src/lib/handoff.ts');
+for (const snippet of ['expo-intent-launcher', 'IntentLauncher.openApplication(androidPackage)']) {
+  if (!handoffLib.includes(snippet)) {
+    fail(`app/src/lib/handoff.ts must use the generic native Android package launcher for payment apps: ${snippet}`);
+  }
+}
+if (handoffLib.includes('intent://#Intent;package=')) {
+  fail('app/src/lib/handoff.ts must not use browser-style intent:// package launch fallback for payment apps');
+}
+for (const match of paymentAppConfig.matchAll(/^\s{2}([a-z0-9_]+):\s*\{/gm)) {
+  const provider = match[1];
+  if (handoffLib.includes(`'${provider}'`) || handoffLib.includes(`"${provider}"`)) {
+    fail(`app/src/lib/handoff.ts must keep payment package launch generic, but hardcodes provider ${provider}`);
+  }
+}
+
 const defaultMethods = readJson('app/assets/data/default-methods.json');
 if (Array.isArray(defaultMethods)) {
   for (const method of defaultMethods) {
